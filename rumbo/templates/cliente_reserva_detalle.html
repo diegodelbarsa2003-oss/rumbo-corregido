@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo %}
+{% block titulo %}Reserva {{ r.codigo }} | {% endblock %}
+{% block rol %}cliente{% endblock %}
+{% block cuerpo %}
+{% include "_barra_cliente.html" %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+  <a class="volver" href="{{ url_for('cliente_reservas') }}">Volver a mis reservas</a>
+  <h1>Reserva {{ r.codigo }}</h1>
+
+  {% if es_nueva %}
+  <section class="tarjeta enlace-demo">
+    <p class="enlace-demo__titulo">Confirmación de tu reserva</p>
+    <p class="enlace-demo__nota">
+      Este proyecto no tiene un servidor de correo configurado (igual que en la recuperación de
+      contraseña), así que el aviso que normalmente llegaría a tu correo se muestra aquí mismo.
+    </p>
+    <p>Hola {{ session.nombre }}, confirmamos tu reserva del paquete <strong>{{ r.paquete_nombre }}</strong>
+      para el {{ r.fecha_salida | fecha_es(true) }}, {{ r.num_personas }} persona(s).
+      Tu código de confirmación es <strong>{{ r.codigo }}</strong>.</p>
+  </section>
+  {% endif %}
+
+  <section class="tarjeta">
+    <h2>Detalle</h2>
+    <table class="tabla-resumen">
+      <tr><th>Paquete</th><td>{{ r.paquete_nombre }}</td></tr>
+      <tr><th>Fecha de viaje</th><td>{{ r.fecha_salida | fecha_es(true) }}</td></tr>
+      <tr><th>Duración</th><td>{{ r.duracion_dias }} días</td></tr>
+      <tr><th>Personas</th><td>{{ r.num_personas }}</td></tr>
+      <tr><th>Estado</th><td><span class="estado estado--{{ 'listo' if r.estado in ('confirmada', 'finalizada') else 'pendiente' }}">{{ r.estado|capitalize }}</span></td></tr>
+      <tr><th>Subtotal paquete</th><td>{{ r.subtotal_paquete | cop }}</td></tr>
+      {% if servicios %}
+      <tr><th>Servicios adicionales</th><td>
+        <ul class="lista-check lista-check--compacta">
+          {% for s in servicios %}<li>{{ s.nombre }} — {{ s.precio_total | cop }}</li>{% endfor %}
+        </ul>
+      </td></tr>
+      {% endif %}
+      <tr><th>Total</th><td><strong>{{ r.total | cop }}</strong></td></tr>
+    </table>
+  </section>
+
+  {% if r.estado == 'cancelada' %}
+    <p class="aviso aviso--error">Esta reserva fue cancelada. Los cupos ya se liberaron.</p>
+  {% endif %}
+
+  <section class="tarjeta">
+    <h2>Itinerario</h2>
+    <ol class="itinerario">
+      {% for dia in itinerario %}
+      <li>
+        <strong>Día {{ dia.dia_numero }} — {{ dia.titulo }}</strong>
+        <p>{{ dia.descripcion }}</p>
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Datos de los viajeros</h2>
+    <p class="intro">
+      Registra los datos básicos de las {{ r.num_personas }} persona(s) incluidas en esta reserva.
+      {{ viajeros|length }} de {{ r.num_personas }} registrada(s).
+    </p>
+
+    {% if viajeros %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Nombres</th><th scope="col">Apellidos</th><th scope="col">Documento</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for v in viajeros %}
+          <tr>
+            <td>{{ v.nombres }}</td>
+            <td>{{ v.apellidos }}</td>
+            <td>{{ v.tipo_documento }} {{ v.numero_documento }}</td>
+            <td>
+              {% if r.estado in ('pendiente', 'confirmada') %}
+              <form method="post" action="{{ url_for('cliente_reserva_viajero_eliminar', reserva_id=r.id, viajero_id=v.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--enlace" type="submit">Quitar</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if viajeros|length < r.num_personas and r.estado in ('pendiente', 'confirmada') %}
+    <form method="post" action="{{ url_for('cliente_reserva_viajero_agregar', reserva_id=r.id) }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {{ campo("nombres", "Nombres") }}
+      {{ campo("apellidos", "Apellidos") }}
+      <div class="campo">
+        <label for="tipo_documento">Tipo de documento</label>
+        <select id="tipo_documento" name="tipo_documento" required>
+          {% for t in tipos_documento %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
+      </div>
+      {{ campo("numero_documento", "Número de documento") }}
+      <button class="boton boton--claro" type="submit">Agregar viajero</button>
+    </form>
+    {% elif viajeros|length >= r.num_personas %}
+    <p class="aviso aviso--ok">Ya registraste los datos de todas las personas de esta reserva.</p>
+    {% endif %}
+  </section>
+
+  {% if puede_pagar %}
+  <section class="tarjeta">
+    <h2>Pagar en línea</h2>
+    <p class="intro">Paga con tarjeta de crédito o débito. Revisamos que aún haya cupo antes de confirmar el pago.</p>
+    <form method="post" action="{{ url_for('cliente_pagar_reserva', reserva_id=r.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="fila">
+        <div class="campo">
+          <label for="metodo">Tipo de tarjeta</label>
+          <select id="metodo" name="metodo" required>
+            <option value="credito">Crédito</option>
+            <option value="debito">Débito</option>
+          </select>
+        </div>
+        {{ campo("titular", "Nombre del titular", autocomplete="cc-name") }}
+      </div>
+      <div class="fila">
+        {{ campo("numero_tarjeta", "Número de tarjeta (16 dígitos)", tipo="text", autocomplete="cc-number") }}
+        {{ campo("vencimiento", "Vencimiento (MM/AA)", tipo="text", autocomplete="cc-exp") }}
+      </div>
+      <div class="fila">
+        {{ campo("cvv", "CVV", tipo="text", autocomplete="cc-csc") }}
+        {% if r.permite_cuotas %}
+        <div class="campo">
+          <label for="cuotas">Cuotas</label>
+          <select id="cuotas" name="cuotas">
+            {% for n in cuotas_disponibles %}<option value="{{ n }}">{{ n }} cuota{{ "s" if n > 1 }}</option>{% endfor %}
+          </select>
+        </div>
+        {% else %}
+        <input type="hidden" name="cuotas" value="1">
+        {% endif %}
+      </div>
+      <button class="boton" type="submit">Pagar {{ r.total | cop }}</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if pago %}
+  <section class="tarjeta">
+    <h2>Pago registrado</h2>
+    <p>Tarjeta {{ pago.metodo }} terminada en {{ pago.tarjeta_final }} · {{ pago.cuotas }} cuota(s) · {{ pago.monto | cop }}</p>
+    <a class="boton boton--enlace" href="{{ url_for('cliente_comprobante_pdf', reserva_id=r.id) }}">Descargar comprobante en PDF</a>
+  </section>
+  {% endif %}
+
+  {% if puede_cancelar or puede_modificar %}
+  <section class="tarjeta">
+    <h2>Cancelar o cambiar la fecha</h2>
+    <p class="intro">
+      Plazo de esta reserva: {{ r.plazo_cancelacion_dias }} días antes del viaje.
+      {% if dias_restantes >= 0 %}Faltan {{ dias_restantes }} día(s) para el viaje.{% else %}El viaje ya ocurrió.{% endif %}
+    </p>
+
+    {% if puede_modificar and salidas_disponibles %}
+    <form method="post" action="{{ url_for('cliente_modificar_fecha', reserva_id=r.id) }}" class="linea-acciones">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label for="salida_id">Nueva fecha</label>
+        <select id="salida_id" name="salida_id">
+          {% for s in salidas_disponibles %}<option value="{{ s.id }}">{{ s.fecha | fecha_es(true) }} — {{ s.cupos_disponibles }} cupos</option>{% endfor %}
+        </select>
+      </div>
+      <button class="boton boton--claro" type="submit">Cambiar fecha</button>
+    </form>
+    {% endif %}
+
+    {% if puede_cancelar %}
+    <form method="post" action="{{ url_for('cliente_cancelar_reserva', reserva_id=r.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="boton boton--claro" type="submit">Cancelar reserva</button>
+    </form>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if puede_calificar %}
+  <section class="tarjeta">
+    <h2>Califica tu viaje</h2>
+    <form method="post" action="{{ url_for('cliente_calificar', reserva_id=r.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label for="puntuacion">Puntuación</label>
+        <select id="puntuacion" name="puntuacion" required>
+          {% for n in [5, 4, 3, 2, 1] %}<option value="{{ n }}">{{ "★" * n }}{{ "☆" * (5 - n) }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="comentario">Comentario (opcional)</label>
+        <textarea id="comentario" name="comentario" rows="3" maxlength="500"></textarea>
+      </div>
+      <button class="boton" type="submit">Enviar calificación</button>
+    </form>
+  </section>
+  {% elif calificacion %}
+  <section class="tarjeta">
+    <h2>Tu calificación</h2>
+    <p>{{ "★" * calificacion.puntuacion }}{{ "☆" * (5 - calificacion.puntuacion) }}</p>
+    {% if calificacion.comentario %}<p>{{ calificacion.comentario }}</p>{% endif %}
+  </section>
+  {% endif %}
+</main>
+{% endblock %}

@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo %}
+{% block titulo %}Operación | {% endblock %}
+{% block rol %}administrador{% endblock %}
+{% block cuerpo %}
+{% include "_barra_admin.html" %}
+
+<main class="panel" id="contenido" data-secciones>
+  {% include "_mensajes.html" %}
+  <h1>Operación de la agencia</h1>
+  <p class="intro">
+    Gestiona hoteles, conductores, vehículos, pilotos y aeronaves de la agencia.
+  </p>
+
+  {% if conflictos %}
+  <section class="tarjeta" data-fijo>
+    <h2>Conflictos de disponibilidad detectados</h2>
+    <ul>
+      {% for c in conflictos %}<li class="aviso aviso--error">{{ c }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <!-- RF-29/RF-30/RF-31: hoteles, horarios, políticas y tipos de habitación -->
+  <section class="tarjeta">
+    <h2>Hoteles</h2>
+    <form method="post" action="{{ url_for('admin_hotel_nuevo') }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label for="h_destino_id">Destino</label>
+        <select id="h_destino_id" name="destino_id" required>
+          <option value="">Elige un destino</option>
+          {% for d in destinos %}<option value="{{ d.id }}">{{ d.nombre }} ({{ d.pais }})</option>{% endfor %}
+        </select>
+      </div>
+      {{ campo("nombre", "Nombre del hotel") }}
+      {{ campo("direccion", "Dirección") }}
+      <div class="campo"><label for="telefono">Teléfono</label><input id="telefono" name="telefono" type="text"></div>
+      <div class="campo"><label for="correo">Correo</label><input id="correo" name="correo" type="text"></div>
+      <div class="campo"><label for="checkin">Check-in</label><input id="checkin" name="checkin" type="time" value="14:00" required></div>
+      <div class="campo"><label for="checkout">Check-out</label><input id="checkout" name="checkout" type="time" value="12:00" required></div>
+      <div class="campo campo--ancho"><label for="politicas">Políticas y condiciones</label><textarea id="politicas" name="politicas" rows="3" placeholder="Cancelaciones, mascotas, restricciones de hospedaje, etc."></textarea></div>
+      <button class="boton boton--claro" type="submit">+ Registrar hotel</button>
+    </form>
+
+    {% if not hoteles %}
+      <p class="intro">Todavía no hay hoteles registrados.</p>
+    {% endif %}
+    {% for h in hoteles %}
+    <details class="tarjeta" open>
+      <summary>
+        <strong>{{ h.nombre }}</strong> — {{ h.destino_nombre }}
+        <span class="estado estado--{{ 'listo' if h.activo else 'pendiente' }}">{{ 'Activo' if h.activo else 'Inactivo' }}</span>
+        <span class="chip">Tipos de habitación: {{ habitaciones_por_hotel.get(h.id, []) | length }}</span>
+      </summary>
+
+      <p class="intro">{{ h.direccion }} · {{ h.telefono }} · {{ h.correo }}</p>
+      <p class="intro"><strong>Check-in:</strong> {{ h.checkin }} · <strong>Check-out:</strong> {{ h.checkout }}</p>
+      {% if h.politicas %}
+      <p class="intro"><strong>Políticas y condiciones:</strong> {{ h.politicas }}</p>
+      {% endif %}
+      <div class="acciones-fila">
+        <a class="boton boton--enlace" href="{{ url_for('admin_hotel_editar', hotel_id=h.id) }}">Editar</a>
+        <form method="post" action="{{ url_for('admin_hotel_estado', hotel_id=h.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="boton boton--claro" type="submit">{{ 'Desactivar' if h.activo else 'Activar' }}</button>
+        </form>
+      </div>
+
+      <h3>Tipos de habitación</h3>
+      {% set habitaciones = habitaciones_por_hotel.get(h.id, []) %}
+      {% if habitaciones %}
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead><tr><th scope="col">Tipo</th><th scope="col">Capacidad</th><th scope="col">Tarifa/noche</th>
+                 <th scope="col">Características</th><th scope="col">Habitaciones</th><th scope="col">Estado</th><th scope="col"></th></tr></thead>
+          <tbody>
+            {% for hab in habitaciones %}
+            <tr>
+              <td>{{ hab.tipo }}</td>
+              <td>{{ hab.capacidad }} pers.</td>
+              <td>{{ hab.tarifa_noche | cop }}</td>
+              <td>{{ hab.caracteristicas }}</td>
+              <td>{{ hab.cupos_totales }}</td>
+              <td><span class="estado estado--{{ 'listo' if hab.activo else 'pendiente' }}">{{ 'Activo' if hab.activo else 'Inactivo' }}</span></td>
+              <td>
+                <form method="post" action="{{ url_for('admin_habitacion_estado', habitacion_id=hab.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="boton boton--claro" type="submit">{{ 'Desactivar' if hab.activo else 'Activar' }}</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('admin_habitacion_agregar', hotel_id=h.id) }}" class="fila">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {{ campo("tipo", "Tipo (sencilla, doble, suite...)") }}
+        <div class="campo"><label>Capacidad</label><input name="capacidad" type="number" min="1" value="2" required></div>
+        <div class="campo"><label>Tarifa por noche</label><input name="tarifa_noche" type="number" min="0" value="150000" required></div>
+        <div class="campo"><label for="caracteristicas">Características (opcional)</label><input id="caracteristicas" name="caracteristicas" type="text"></div>
+        <div class="campo"><label>Nº de habitaciones de este tipo</label><input name="cupos_totales" type="number" min="1" value="5" required></div>
+        <button class="boton boton--claro" type="submit">+ Agregar tipo de habitación</button>
+      </form>
+    </details>
+    {% endfor %}
+  </section>
+
+  <!-- RF-33: conductores -->
+  <section class="tarjeta">
+    <h2>Conductores</h2>
+    <form method="post" action="{{ url_for('admin_conductor_nuevo') }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {{ campo("nombres", "Nombres") }}
+      {{ campo("apellidos", "Apellidos") }}
+      <div class="campo"><label for="telefono">Teléfono</label><input id="telefono" name="telefono" type="text"></div>
+      <div class="campo"><label for="correo">Correo</label><input id="correo" name="correo" type="text"></div>
+      {{ campo("documento", "Documento") }}
+      <button class="boton boton--claro" type="submit">+ Registrar conductor</button>
+    </form>
+    {% if conductores %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Nombre</th><th scope="col">Teléfono</th><th scope="col">Correo</th>
+               <th scope="col">Documento</th><th scope="col">Estado</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for c in conductores %}
+          <tr>
+            <td>{{ c.nombres }} {{ c.apellidos }}</td><td>{{ c.telefono }}</td><td>{{ c.correo }}</td>
+            <td>{{ c.documento }}</td>
+            <td><span class="estado estado--{{ 'listo' if c.activo else 'pendiente' }}">{{ 'Activo' if c.activo else 'Inactivo' }}</span></td>
+            <td>
+              <form method="post" action="{{ url_for('admin_conductor_estado', conductor_id=c.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">{{ 'Desactivar' if c.activo else 'Activar' }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- RF-34: vehículos -->
+  <section class="tarjeta">
+    <h2>Vehículos</h2>
+    <form method="post" action="{{ url_for('admin_vehiculo_nuevo') }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {{ campo("placa", "Placa") }}
+      {{ campo("tipo", "Tipo (bus, van, automóvil...)") }}
+      <div class="campo"><label>Capacidad</label><input name="capacidad" type="number" min="1" value="4" required></div>
+      <div class="campo">
+        <label>Estado</label>
+        <select name="estado"><option value="disponible">Disponible</option><option value="mantenimiento">En mantenimiento</option></select>
+      </div>
+      <button class="boton boton--claro" type="submit">+ Registrar vehículo</button>
+    </form>
+    {% if vehiculos %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Placa</th><th scope="col">Tipo</th><th scope="col">Capacidad</th>
+               <th scope="col">Estado</th><th scope="col">Activo</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for v in vehiculos %}
+          <tr>
+            <td>{{ v.placa }}</td><td>{{ v.tipo }}</td><td>{{ v.capacidad }} pasaj.</td>
+            <td>{{ 'Disponible' if v.estado == 'disponible' else 'En mantenimiento' }}</td>
+            <td><span class="estado estado--{{ 'listo' if v.activo else 'pendiente' }}">{{ 'Activo' if v.activo else 'Inactivo' }}</span></td>
+            <td>
+              <form method="post" action="{{ url_for('admin_vehiculo_estado', vehiculo_id=v.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">{{ 'Desactivar' if v.activo else 'Activar' }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- RF-37: pilotos -->
+  <section class="tarjeta">
+    <h2>Pilotos</h2>
+    <form method="post" action="{{ url_for('admin_piloto_nuevo') }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {{ campo("nombres", "Nombres") }}
+      {{ campo("apellidos", "Apellidos") }}
+      <div class="campo"><label for="telefono">Teléfono</label><input id="telefono" name="telefono" type="text"></div>
+      <div class="campo"><label for="correo">Correo</label><input id="correo" name="correo" type="text"></div>
+      {{ campo("documento", "Documento") }}
+      {{ campo("licencia", "Nº de licencia") }}
+      <button class="boton boton--claro" type="submit">+ Registrar piloto</button>
+    </form>
+    {% if pilotos %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Nombre</th><th scope="col">Teléfono</th><th scope="col">Documento</th>
+               <th scope="col">Licencia</th><th scope="col">Estado</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for p in pilotos %}
+          <tr>
+            <td>{{ p.nombres }} {{ p.apellidos }}</td><td>{{ p.telefono }}</td><td>{{ p.documento }}</td>
+            <td>{{ p.licencia }}</td>
+            <td><span class="estado estado--{{ 'listo' if p.activo else 'pendiente' }}">{{ 'Activo' if p.activo else 'Inactivo' }}</span></td>
+            <td>
+              <form method="post" action="{{ url_for('admin_piloto_estado', piloto_id=p.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">{{ 'Desactivar' if p.activo else 'Activar' }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- RF-38: aeronaves -->
+  <section class="tarjeta">
+    <h2>Aeronaves</h2>
+    <form method="post" action="{{ url_for('admin_aeronave_nueva') }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {{ campo("matricula", "Matrícula") }}
+      {{ campo("modelo", "Modelo") }}
+      <div class="campo"><label>Capacidad</label><input name="capacidad" type="number" min="1" value="150" required></div>
+      <button class="boton boton--claro" type="submit">+ Registrar aeronave</button>
+    </form>
+    {% if aeronaves %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Matrícula</th><th scope="col">Modelo</th><th scope="col">Capacidad</th>
+               <th scope="col">Estado</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for a in aeronaves %}
+          <tr>
+            <td>{{ a.matricula }}</td><td>{{ a.modelo }}</td><td>{{ a.capacidad }} pasaj.</td>
+            <td><span class="estado estado--{{ 'listo' if a.activo else 'pendiente' }}">{{ 'Activo' if a.activo else 'Inactivo' }}</span></td>
+            <td>
+              <form method="post" action="{{ url_for('admin_aeronave_estado', aeronave_id=a.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">{{ 'Desactivar' if a.activo else 'Activar' }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+
+  <p class="intro">
+    Para asignar estos recursos a un paquete turístico concreto (hoteles, transporte y vuelos),
+    entra a "Paquetes", elige uno y luego a "Recursos operativos".
+  </p>
+</main>
+{% endblock %}

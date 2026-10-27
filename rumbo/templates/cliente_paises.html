@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block titulo %}Países disponibles | {% endblock %}
+{% block rol %}cliente{% endblock %}
+{% block cuerpo %}
+{% include "_barra_cliente.html" %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>Países disponibles</h1>
+  <p class="intro">Consulta todos los países que ofrecemos como destino turístico.</p>
+
+  {% if not paises %}
+    <p class="intro">Todavía no hay países registrados en el catálogo.</p>
+  {% else %}
+    <div class="rejilla">
+      {% for pa in paises %}
+      <article class="tarjeta">
+        <h2>{{ pa.pais }}</h2>
+        <p class="intro">{{ pa.num_destinos }} destino(s) · {{ pa.num_paquetes }} paquete(s) disponible(s)</p>
+        <a class="boton boton--enlace" href="{{ url_for('cliente_destinos', q=pa.pais) }}">Ver destinos en {{ pa.pais }}</a>
+      </article>
+      {% endfor %}
+    </div>
+  {% endif %}
+</main>
+{% endblock %}

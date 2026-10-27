@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titulo %}Proveedores | {% endblock %}
+{% block rol %}administrador{% endblock %}
+{% block cuerpo %}
+{% include "_barra_admin.html" %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>Inventario de proveedores</h1>
+  <p class="intro">Gestiona los hoteles y restaurantes que se usan en los paquetes turísticos.</p>
+
+  <p><a class="boton" href="{{ url_for('admin_proveedor_nuevo') }}">+ Nuevo proveedor</a></p>
+
+  {% if not proveedores %}
+    <p class="intro">Todavía no hay proveedores registrados.</p>
+  {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th scope="col">Nombre</th>
+            <th scope="col">Tipo</th>
+            <th scope="col">Destino</th>
+            <th scope="col">Capacidad</th>
+            <th scope="col">Estado</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pr in proveedores %}
+          <tr>
+            <th scope="row">{{ pr.nombre }}</th>
+            <td>{{ 'Hotel' if pr.tipo == 'hotel' else 'Restaurante' }}</td>
+            <td>{{ pr.destino_nombre }}</td>
+            <td>{{ pr.capacidad }}</td>
+            <td><span class="estado estado--{{ 'listo' if pr.activo else 'pendiente' }}">{{ 'Activo' if pr.activo else 'Inactivo' }}</span></td>
+            <td><div class="acciones-fila">
+              <a class="boton boton--enlace" href="{{ url_for('admin_proveedor_editar', proveedor_id=pr.id) }}">Editar</a>
+              <form method="post" action="{{ url_for('admin_proveedor_estado', proveedor_id=pr.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">{{ 'Desactivar' if pr.activo else 'Activar' }}</button>
+              </form>
+              <form method="post" action="{{ url_for('admin_proveedor_eliminar', proveedor_id=pr.id) }}"
+                    onsubmit="return confirm('¿Eliminar este proveedor del inventario?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro boton--peligro" type="submit">Eliminar</button>
+              </form>
+            </div></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</main>
+{% endblock %}

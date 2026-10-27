@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo %}
+{% block titulo %}Editar cliente | {% endblock %}
+{% block rol %}administrador{% endblock %}
+{% block cuerpo %}
+{% include "_barra_admin.html" %}
+
+<main class="panel panel--angosto" id="contenido">
+  {% include "_mensajes.html" %}
+  <a class="volver" href="{{ url_for('admin_clientes') }}">&larr; Volver a clientes</a>
+  <h1>{{ cliente.nombres }} {{ cliente.apellidos }}</h1>
+  <p class="intro">
+    Cuenta <strong>{{ 'activa' if cliente.estado == 'activo' else 'inactiva' }}</strong>
+    · Registrado el {{ cliente.creado_en[:10] }}
+  </p>
+
+  <section class="tarjeta">
+    <h2>Datos de la cuenta</h2>
+    <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="fila">
+        {{ campo("nombres", "Nombres", valor=datos.nombres, error=errores.nombres) }}
+        {{ campo("apellidos", "Apellidos", valor=datos.apellidos, error=errores.apellidos) }}
+      </div>
+      {{ campo("correo", "Correo electrónico", tipo="email", valor=datos.correo, error=errores.correo) }}
+      <button class="boton" type="submit">Guardar cambios</button>
+    </form>
+
+    <form method="post" action="{{ url_for('admin_cliente_estado', cliente_id=cliente.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="boton boton--claro" type="submit">
+        {{ 'Desactivar esta cuenta' if cliente.estado == 'activo' else 'Activar esta cuenta' }}
+      </button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Reservas de este cliente</h2>
+    {% if not reservas %}
+    <p class="intro">Todavía no tiene reservas.</p>
+    {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Código</th><th scope="col">Paquete</th><th scope="col">Total</th><th scope="col">Estado</th></tr></thead>
+        <tbody>
+          {% for r in reservas %}
+          <tr>
+            <td>{{ r.codigo }}</td>
+            <td>{{ r.paquete_nombre }}</td>
+            <td>{{ r.total | cop }}</td>
+            <td><span class="estado estado--{{ 'listo' if r.estado in ('confirmada','finalizada') else 'pendiente' }}">
+              {{ r.estado | capitalize }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

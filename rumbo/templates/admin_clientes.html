@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titulo %}Clientes | {% endblock %}
+{% block rol %}administrador{% endblock %}
+{% block cuerpo %}
+{% include "_barra_admin.html" %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>Clientes registrados</h1>
+  <p class="intro">Consulta, actualiza y gestiona el estado de las cuentas de los clientes.</p>
+
+  <form method="get" class="buscador">
+    <div class="campo">
+      <label for="q">Buscar por nombre o correo</label>
+      <input id="q" name="q" type="text" value="{{ q }}" placeholder="Ej. Ana Gómez o ana@correo.com">
+    </div>
+    <button class="boton boton--claro" type="submit">Buscar</button>
+  </form>
+
+  {% if not clientes %}
+  <p class="intro">No hay clientes que coincidan con la búsqueda.</p>
+  {% else %}
+  <div class="tabla-envoltura">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Reservas</th>
+          <th scope="col">Registrado</th><th scope="col">Estado</th><th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in clientes %}
+        <tr>
+          <th scope="row">{{ c.nombres }} {{ c.apellidos }}</th>
+          <td>{{ c.correo }}</td>
+          <td>{{ c.num_reservas }}</td>
+          <td>{{ c.creado_en[:10] }}</td>
+          <td><span class="estado estado--{{ 'listo' if c.estado == 'activo' else 'pendiente' }}">
+            {{ 'Activa' if c.estado == 'activo' else 'Inactiva' }}</span></td>
+          <td><div class="acciones-fila">
+            <a class="boton boton--enlace" href="{{ url_for('admin_cliente_editar', cliente_id=c.id) }}">Ver / editar</a>
+            <form method="post" action="{{ url_for('admin_cliente_estado', cliente_id=c.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="boton boton--claro" type="submit">
+                {{ 'Desactivar' if c.estado == 'activo' else 'Activar' }}
+              </button>
+            </form>
+          </div></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titulo %}{{ 'Editar proveedor' if modo == 'editar' else 'Nuevo proveedor' }} | {% endblock %}
+{% block rol %}administrador{% endblock %}
+{% block cuerpo %}
+{% include "_barra_admin.html" %}
+
+<main class="panel panel--angosto" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>{{ 'Editar proveedor' if modo == 'editar' else 'Nuevo proveedor' }}</h1>
+  <p class="intro">Registra hoteles y restaurantes disponibles para los paquetes turísticos.</p>
+
+  <form method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="campo{% if errores.destino_id %} campo--error{% endif %}">
+      <label for="destino_id">Destino</label>
+      <select id="destino_id" name="destino_id" required>
+        <option value="">Elige un destino</option>
+        {% for d in destinos %}
+        <option value="{{ d.id }}"{% if datos.destino_id == d.id %} selected{% endif %}>{{ d.nombre }} ({{ d.pais }})</option>
+        {% endfor %}
+      </select>
+      <p class="msg msg--error">{{ errores.destino_id }}</p>
+    </div>
+
+    <div class="campo{% if errores.tipo %} campo--error{% endif %}">
+      <label for="tipo">Tipo</label>
+      <select id="tipo" name="tipo" required>
+        <option value="hotel"{% if datos.tipo == 'hotel' %} selected{% endif %}>Hotel</option>
+        <option value="restaurante"{% if datos.tipo == 'restaurante' %} selected{% endif %}>Restaurante</option>
+      </select>
+      <p class="msg msg--error">{{ errores.tipo }}</p>
+    </div>
+
+    <div class="campo{% if errores.nombre %} campo--error{% endif %}">
+      <label for="nombre">Nombre</label>
+      <input id="nombre" name="nombre" type="text" value="{{ datos.nombre }}" required>
+      <p class="msg msg--error">{{ errores.nombre }}</p>
+    </div>
+
+    <div class="campo">
+      <label for="direccion">Dirección</label>
+      <input id="direccion" name="direccion" type="text" value="{{ datos.direccion }}">
+    </div>
+
+    <div class="fila">
+      <div class="campo{% if errores.capacidad %} campo--error{% endif %}">
+        <label for="capacidad">Capacidad</label>
+        <input id="capacidad" name="capacidad" type="number" min="0" value="{{ datos.capacidad }}" required>
+        <p class="msg msg--error">{{ errores.capacidad }}</p>
+      </div>
+      <div class="campo">
+        <label for="contacto">Contacto</label>
+        <input id="contacto" name="contacto" type="text" value="{{ datos.contacto }}" placeholder="Teléfono o correo">
+      </div>
+    </div>
+
+    <button class="boton" type="submit">{{ 'Guardar cambios' if modo == 'editar' else 'Crear proveedor' }}</button>
+    <a class="volver" href="{{ url_for('admin_proveedores') }}">Cancelar</a>
+  </form>
+</main>
+{% endblock %}

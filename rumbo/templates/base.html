@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}{% endblock %}{{ app_nombre }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+</head>
+<body data-rol="{% block rol %}{% endblock %}">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  {% block cuerpo %}{% endblock %}
+  <script src="{{ url_for('static', filename='js/paneles.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

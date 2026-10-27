@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}Inicio | {% endblock %}
+{% block cuerpo %}
+<header class="portada-cab">
+  <a class="marca marca--barra" href="{{ url_for('inicio') }}" aria-label="{{ app_nombre }}, inicio">
+    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 17 L20 11" stroke="var(--sol)" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="11" r="2.6" fill="var(--sol)"/></svg>
+    <span>{{ app_nombre }}</span>
+  </a>
+  <nav class="portada-cab__acciones" aria-label="Acceso">
+    <a href="{{ url_for('acceso', rol='administrador') }}" class="portada-cab__agencia">Acceso agencia</a>
+    <a class="boton boton--claro" href="{{ url_for('acceso', rol='cliente') }}">Iniciar sesión</a>
+    <a class="boton" href="{{ url_for('registro', rol='cliente') }}">Crear cuenta</a>
+  </nav>
+</header>
+
+<main id="contenido" class="portada">
+  {% include "_mensajes.html" %}
+  {% set publico = true %}
+  {% include "_portada.html" %}
+</main>
+
+<footer class="portada-pie">
+  <a href="{{ url_for('requerimientos') }}">Ver los requerimientos del sistema</a>
+  <p>Proyecto de Ingeniería de Software, Universidad Cooperativa de Colombia.</p>
+</footer>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/banner.js') }}"></script>{% endblock %}

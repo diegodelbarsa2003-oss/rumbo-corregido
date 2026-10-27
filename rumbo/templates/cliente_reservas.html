@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block titulo %}Mis reservas | {% endblock %}
+{% block rol %}cliente{% endblock %}
+{% block cuerpo %}
+{% include "_barra_cliente.html" %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>Mis reservas</h1>
+  <p class="intro">Consulta, paga, modifica o cancela tus reservas.</p>
+
+  {% if not reservas %}
+    <p class="intro">Todavía no tienes reservas. <a href="{{ url_for('cliente_paquetes') }}">Explora los paquetes disponibles</a>.</p>
+  {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th scope="col">Código</th>
+            <th scope="col">Paquete</th>
+            <th scope="col">Fecha de viaje</th>
+            <th scope="col">Personas</th>
+            <th scope="col">Total</th>
+            <th scope="col">Estado</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reservas %}
+          <tr>
+            <th scope="row">{{ r.codigo }}</th>
+            <td>{{ r.paquete_nombre }}</td>
+            <td>{{ r.fecha_salida | fecha_es(true) }}</td>
+            <td>{{ r.num_personas }}</td>
+            <td>{{ r.total | cop }}</td>
+            <td><span class="estado estado--{{ 'listo' if r.estado in ('confirmada', 'finalizada') else 'pendiente' }}">
+              {{ r.estado|capitalize }}
+            </span></td>
+            <td><a class="boton boton--enlace" href="{{ url_for('cliente_reserva_detalle', reserva_id=r.id) }}">Ver</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</main>
+{% endblock %}

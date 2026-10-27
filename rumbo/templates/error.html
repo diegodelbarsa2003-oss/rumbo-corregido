@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block titulo %}Error {{ codigo }} | {% endblock %}
+{% block cuerpo %}
+<main class="error" id="contenido">
+  <h1>{{ codigo }}</h1>
+  <p>{{ mensaje }}</p>
+  <a class="boton boton--enlace" href="{{ url_for('inicio') }}">Ir al inicio</a>
+</main>
+{% endblock %}

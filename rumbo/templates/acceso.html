@@ -1,0 +1,66 @@
+{% extends "layout_acceso.html" %}
+{% from "_campos.html" import campo, campo_password %}
+
+{% block titulo %}{{ 'Crear cuenta' if modo == 'registro' else 'Ingresar' }} como {{ r.singular }} | {% endblock %}
+{% block rol %}{{ rol }}{% endblock %}
+
+{% block mensaje %}
+  <h2>{{ r.titular }}</h2>
+  <p>{{ r.bajada }}</p>
+{% endblock %}
+
+{% block formulario %}
+  <a class="volver" href="{{ url_for('inicio') }}">Volver al inicio</a>
+
+  <h1>{{ 'Crear cuenta de ' if modo == 'registro' else 'Ingresar como ' }}{{ r.singular }}</h1>
+
+  <nav class="pestanas" aria-label="Tipo de acceso">
+    <a href="{{ url_for('acceso', rol=rol) }}"{% if modo == 'ingresar' %} aria-current="page"{% endif %}>Iniciar sesión</a>
+    {% if rol == 'cliente' %}
+    <a href="{{ url_for('registro', rol=rol) }}"{% if modo == 'registro' %} aria-current="page"{% endif %}>Crear cuenta</a>
+    {% endif %}
+  </nav>
+
+  <form method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    {% if errores.general %}
+      <p class="aviso aviso--error" role="alert">{{ errores.general }}</p>
+    {% endif %}
+
+    {% if modo == 'registro' %}
+      <div class="fila">
+        {{ campo("nombres", "Nombres", valor=datos.nombres, error=errores.nombres, autocomplete="given-name") }}
+        {{ campo("apellidos", "Apellidos", valor=datos.apellidos, error=errores.apellidos, autocomplete="family-name") }}
+      </div>
+      {{ campo("correo", "Correo electrónico", tipo="email", valor=datos.correo, error=errores.correo, autocomplete="email") }}
+      {{ campo_password("password", "Contraseña", error=errores.password, ayuda="Mínimo 8 caracteres, con letras y números.") }}
+      {{ campo_password("confirmar", "Confirmar contraseña", error=errores.confirmar) }}
+      <button class="boton" type="submit">Crear cuenta</button>
+    {% else %}
+      {{ campo("correo", "Correo electrónico", tipo="email", valor=datos.correo, autocomplete="email") }}
+      {{ campo_password("password", "Contraseña", autocomplete="current-password") }}
+      {% if rol == 'administrador' %}
+      {{ campo_password("token_agencia", "Token de acceso de la agencia", autocomplete="off", ayuda="Lo entrega la agencia al encargado. No se puede crear una cuenta de administrador desde aquí.") }}
+      {% endif %}
+      <button class="boton" type="submit">Iniciar sesión</button>
+      {% if rol == 'cliente' %}
+      <a class="olvido" href="{{ url_for('recuperar', rol=rol) }}">¿Olvidaste tu contraseña?</a>
+      {% else %}
+      <p class="msg">¿Perdiste tu contraseña o el token? Solicítalos al encargado de la agencia.</p>
+      {% endif %}
+    {% endif %}
+  </form>
+
+  <p class="cambio-rol">
+    {% if rol == 'cliente' %}
+      ¿Eres parte de la agencia? <a href="{{ url_for('acceso', rol='administrador') }}">Entra como administrador</a>
+    {% else %}
+      ¿Vas a reservar un viaje? <a href="{{ url_for('acceso', rol='cliente') }}">Entra como cliente</a>
+    {% endif %}
+  </p>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/acceso.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "layout_acceso.html" %}
+{% from "_campos.html" import campo %}
+
+{% block titulo %}Recuperar contraseña | {% endblock %}
+{% block rol %}{{ rol }}{% endblock %}
+
+{% block mensaje %}
+  <h2>{{ r.titular }}</h2>
+  <p>{{ r.bajada }}</p>
+{% endblock %}
+
+{% block formulario %}
+  <a class="volver" href="{{ url_for('acceso', rol=rol) }}">Volver a iniciar sesión</a>
+  <h1>Recuperar contraseña</h1>
+
+  {% if enviado %}
+    <p class="aviso aviso--ok">
+      Si el correo tiene una cuenta como {{ r.singular }}, generamos un enlace para crear una nueva contraseña.
+    </p>
+    {% if enlace %}
+    <div class="enlace-demo">
+      <p class="enlace-demo__titulo">Enlace de restablecimiento (válido 30 minutos)</p>
+      <p class="enlace-demo__nota">
+        Este proyecto no tiene un servidor de correo configurado, así que el enlace se muestra
+        aquí en vez de enviarse por email. En un sistema en producción llegaría a la bandeja de entrada.
+      </p>
+      <a class="enlace-demo__link" href="{{ enlace }}">{{ enlace }}</a>
+    </div>
+    {% endif %}
+    <a class="volver" href="{{ url_for('acceso', rol=rol) }}">Volver a iniciar sesión</a>
+  {% else %}
+    <p class="intro">Escribe el correo de tu cuenta de {{ r.singular }} y te daremos un enlace para crear una nueva contraseña.</p>
+    <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {{ campo("correo", "Correo electrónico", tipo="email", valor=correo, error=errores.correo, autocomplete="email") }}
+      <button class="boton" type="submit">Enviar enlace</button>
+    </form>
+  {% endif %}
+{% endblock %}

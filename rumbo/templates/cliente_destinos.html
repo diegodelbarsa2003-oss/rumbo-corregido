@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_foto.html" import foto %}
+{% block titulo %}Destinos | {% endblock %}
+{% block rol %}cliente{% endblock %}
+{% block cuerpo %}
+{% include "_barra_cliente.html" %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>Destinos turísticos</h1>
+  <p class="intro">
+    Busca por nombre del destino, país o región, o filtra exactamente por región.
+    También puedes <a href="{{ url_for('cliente_paises') }}">consultar los países disponibles</a>.
+  </p>
+
+  <form class="buscador" method="get">
+    <div class="campo">
+      <label for="q">Nombre, país o región</label>
+      <input id="q" name="q" type="search" value="{{ q }}" placeholder="Por ejemplo: Cartagena, Colombia, Caribe...">
+    </div>
+    <div class="campo">
+      <label for="region">Filtrar por región</label>
+      <select id="region" name="region">
+        <option value="">Todas las regiones</option>
+        {% for r in regiones %}
+        <option value="{{ r }}"{% if region == r %} selected{% endif %}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="boton" type="submit">Buscar</button>
+    {% if q or region %}<a class="volver" href="{{ url_for('cliente_destinos') }}">Quitar filtros</a>{% endif %}
+  </form>
+
+  {% if not destinos %}
+    <p class="intro">No encontramos destinos que coincidan con "{{ q }}".</p>
+  {% else %}
+    <div class="rejilla">
+      {% for d in destinos %}
+      <article class="tarjeta tarjeta--foto">
+        {{ foto(d.nombre, d.imagen) }}
+        <h2>{{ d.nombre }}</h2>
+        <p class="intro">{{ d.pais }} · {{ d.region }}</p>
+        <p>{{ d.descripcion }}</p>
+        <p class="intro">{{ d.num_paquetes }} paquete(s) disponible(s)</p>
+        <a class="boton boton--enlace" href="{{ url_for('cliente_paquetes', destino_id=d.id) }}">Ver paquetes</a>
+      </article>
+      {% endfor %}
+    </div>
+  {% endif %}
+</main>
+{% endblock %}

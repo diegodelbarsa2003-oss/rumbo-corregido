@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "_foto.html" import foto %}
+{% block titulo %}Paquetes turísticos | {% endblock %}
+{% block rol %}cliente{% endblock %}
+{% block cuerpo %}
+{% include "_barra_cliente.html" %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>Paquetes turísticos</h1>
+  <p class="intro">Filtra por precio máximo, duración y categoría.</p>
+
+  <form class="filtros" method="get">
+    <div class="campo">
+      <label for="q">Buscar</label>
+      <input id="q" name="q" type="search" value="{{ filtros.q }}" placeholder="Nombre del paquete o del destino">
+    </div>
+    <div class="campo">
+      <label for="categoria">Categoría</label>
+      <select id="categoria" name="categoria">
+        <option value="">Todas</option>
+        {% for clave, etiqueta in categorias.items() %}
+        <option value="{{ clave }}"{% if filtros.categoria == clave %} selected{% endif %}>{{ etiqueta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="campo">
+      <label for="precio_max">Precio máximo por persona</label>
+      <input id="precio_max" name="precio_max" type="number" min="0" step="50000" value="{{ filtros.precio_max or '' }}">
+    </div>
+    <div class="campo">
+      <label for="duracion_max">Duración máxima (días)</label>
+      <input id="duracion_max" name="duracion_max" type="number" min="1" step="1" value="{{ filtros.duracion_max or '' }}">
+    </div>
+    {% if filtros.destino_id %}<input type="hidden" name="destino_id" value="{{ filtros.destino_id }}">{% endif %}
+    <button class="boton" type="submit">Filtrar</button>
+    <a class="volver" href="{{ url_for('cliente_paquetes') }}">Limpiar filtros</a>
+  </form>
+
+  {% if not paquetes %}
+    <p class="intro">No hay paquetes que coincidan con esos filtros.</p>
+  {% else %}
+    <form method="get" action="{{ url_for('cliente_comparar') }}" id="form-comparar">
+      <p class="intro">Marca hasta 4 paquetes para compararlos entre sí.</p>
+      <div class="rejilla">
+        {% for p in paquetes %}
+        <article class="tarjeta tarjeta-paquete tarjeta--foto">
+          <div class="foto-envoltura">
+            {{ foto(p.destino_nombre, p.destino_imagen) }}
+            <label class="tarjeta-paquete__marca tarjeta-paquete__marca--foto">
+              <input type="checkbox" value="{{ p.id }}" class="marca-comparar">
+              Comparar
+            </label>
+          </div>
+          <span class="chip chip--{{ p.categoria }}">{{ categorias.get(p.categoria, p.categoria) }}</span>
+          <h2>{{ p.nombre }}</h2>
+          <p class="intro">{{ p.destino_nombre }} · {{ p.pais }}</p>
+          <p>{{ p.resumen }}</p>
+          <p class="tarjeta-paquete__datos">
+            {{ p.duracion_dias }} días
+            {% if p.promedio %} · {{ p.promedio }}★{% endif %}
+          </p>
+          <p class="precio">{{ p.precio_persona | cop }} <span>por persona</span></p>
+          <a class="boton boton--enlace" href="{{ url_for('cliente_paquete_detalle', paquete_id=p.id) }}">Ver detalle</a>
+        </article>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="ids" id="ids-comparar">
+      <button class="boton" type="submit" id="boton-comparar" disabled>Comparar seleccionados</button>
+    </form>
+  {% endif %}
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var casillas = document.querySelectorAll(".marca-comparar");
+    var boton = document.getElementById("boton-comparar");
+    var oculto = document.getElementById("ids-comparar");
+    function actualizar() {
+      var elegidos = Array.prototype.filter.call(casillas, function (c) { return c.checked; });
+      elegidos.forEach(function (c, i) { c.disabled = elegidos.length >= 4 && i >= 4 && !c.checked; });
+      oculto.value = elegidos.map(function (c) { return c.value; }).join(",");
+      boton.disabled = elegidos.length < 2;
+    }
+    casillas.forEach(function (c) { c.addEventListener("change", actualizar); });
+  })();
+</script>
+{% endblock %}

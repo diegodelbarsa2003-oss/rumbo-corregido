@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% from "_foto.html" import foto %}
+{% block titulo %}{{ p.nombre }} | {% endblock %}
+{% block rol %}cliente{% endblock %}
+{% block cuerpo %}
+{% include "_barra_cliente.html" %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+  <a class="volver" href="{{ url_for('cliente_paquetes') }}">Volver a paquetes</a>
+
+  {{ foto(p.destino_nombre, p.destino_imagen, "foto--portada") }}
+  <span class="chip chip--{{ p.categoria }}">{{ p.categoria|capitalize }}</span>
+  <h1>{{ p.nombre }}</h1>
+  <p class="intro">{{ p.destino_nombre }} · {{ p.pais }} · {{ p.region }} · {{ p.duracion_dias }} días</p>
+  <p>{{ p.resumen }}</p>
+  <p class="precio">{{ p.precio_persona | cop }} <span>por persona</span></p>
+
+  <section class="tarjeta">
+    <h2>Qué incluye el paquete</h2>
+    <ul class="lista-check">
+      {% for i in incluidos %}<li>{{ i.texto }}</li>{% endfor %}
+    </ul>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Itinerario</h2>
+    <ol class="itinerario">
+      {% for dia in itinerario %}
+      <li>
+        <strong>Día {{ dia.dia_numero }} — {{ dia.titulo }}</strong>
+        <p>{{ dia.descripcion }}</p>
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Disponibilidad de cupos por fecha</h2>
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Fecha de salida</th><th scope="col">Cupos disponibles</th></tr></thead>
+        <tbody>
+          {% for s in salidas %}
+          <tr>
+            <td>{{ s.fecha | fecha_es(true) }}</td>
+            <td>
+              {% if s.cupos_disponibles > 0 %}
+                {{ s.cupos_disponibles }} de {{ s.cupos_totales }}
+              {% else %}
+                <span class="estado estado--pendiente">Agotado</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Reservar este paquete</h2>
+    <form method="post" action="{{ url_for('cliente_reservar', paquete_id=p.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="fila">
+        <div class="campo">
+          <label for="salida_id">Fecha de salida</label>
+          <select id="salida_id" name="salida_id" required>
+            {% for s in salidas if s.cupos_disponibles > 0 %}
+            <option value="{{ s.id }}">{{ s.fecha | fecha_es(true) }} — {{ s.cupos_disponibles }} cupos</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="campo">
+          <label for="num_personas">Número de personas</label>
+          <input id="num_personas" name="num_personas" type="number" min="1" max="20" value="1" required>
+        </div>
+      </div>
+
+      {% if servicios %}
+      <fieldset class="servicios">
+        <legend>Servicios adicionales (opcional)</legend>
+        {% for s in servicios %}
+        <label class="servicio">
+          <input type="checkbox" name="servicios" value="{{ s.id }}" data-precio="{{ s.precio_persona }}">
+          {{ s.nombre }} — {{ s.precio_persona | cop }} por persona
+        </label>
+        {% endfor %}
+      </fieldset>
+      {% endif %}
+
+      <p class="precio-total" id="precio-total-estimado">
+        Precio total estimado: <strong id="precio-total-valor">{{ p.precio_persona | cop }}</strong>
+      </p>
+
+      <button class="boton" type="submit">Reservar ahora</button>
+    </form>
+  </section>
+
+  <script>
+    // Mostrar el precio total del paquete seleccionado (precio por persona ×
+    // número de personas, más los servicios adicionales marcados) mientras el cliente
+    // arma su reserva, antes de enviarla.
+    (function () {
+      var precioPersona = {{ p.precio_persona | int }};
+      var numPersonas = document.getElementById("num_personas");
+      var checks = document.querySelectorAll('input[name="servicios"]');
+      var salida = document.getElementById("precio-total-valor");
+      var COP = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+
+      function recalcular() {
+        var personas = parseInt(numPersonas.value, 10) || 0;
+        var total = precioPersona * personas;
+        checks.forEach(function (c) {
+          if (c.checked) total += (parseInt(c.dataset.precio, 10) || 0) * personas;
+        });
+        salida.textContent = COP.format(total);
+      }
+
+      if (numPersonas) {
+        numPersonas.addEventListener("input", recalcular);
+        checks.forEach(function (c) { c.addEventListener("change", recalcular); });
+        recalcular();
+      }
+    })();
+  </script>
+
+  <section class="tarjeta">
+    <h2>
+      Calificaciones
+      {% if resumen.n %}<span class="intro">— {{ resumen.promedio }}★ ({{ resumen.n }} opinión(es))</span>{% endif %}
+    </h2>
+    {% if not comentarios %}
+      <p class="intro">Este paquete todavía no tiene calificaciones.</p>
+    {% else %}
+      <ul class="comentarios">
+        {% for c in comentarios %}
+        <li>
+          <strong>{{ "★" * c.puntuacion }}{{ "☆" * (5 - c.puntuacion) }}</strong>
+          <span class="intro">{{ c.nombres }}</span>
+          {% if c.comentario %}<p>{{ c.comentario }}</p>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

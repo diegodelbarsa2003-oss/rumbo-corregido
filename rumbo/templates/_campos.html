@@ -1,0 +1,22 @@
+{% macro campo(nombre, etiqueta, tipo="text", valor="", error="", autocomplete="off", ayuda="") %}
+<div class="campo{% if error %} campo--error{% endif %}">
+  <label for="{{ nombre }}">{{ etiqueta }}</label>
+  <input id="{{ nombre }}" name="{{ nombre }}" type="{{ tipo }}" value="{{ valor }}"
+         autocomplete="{{ autocomplete }}" required
+         aria-describedby="{{ nombre }}-msg"{% if error %} aria-invalid="true"{% endif %}>
+  <p class="msg{% if error %} msg--error{% endif %}" id="{{ nombre }}-msg">{{ error or ayuda }}</p>
+</div>
+{% endmacro %}
+
+{% macro campo_password(nombre, etiqueta, error="", autocomplete="new-password", ayuda="") %}
+<div class="campo{% if error %} campo--error{% endif %}">
+  <label for="{{ nombre }}">{{ etiqueta }}</label>
+  <div class="campo__clave">
+    <input id="{{ nombre }}" name="{{ nombre }}" type="password"
+           autocomplete="{{ autocomplete }}" required
+           aria-describedby="{{ nombre }}-msg"{% if error %} aria-invalid="true"{% endif %}>
+    <button type="button" class="ver-clave" data-objetivo="{{ nombre }}" aria-pressed="false">Mostrar</button>
+  </div>
+  <p class="msg{% if error %} msg--error{% endif %}" id="{{ nombre }}-msg" aria-live="polite">{{ error or ayuda }}</p>
+</div>
+{% endmacro %}

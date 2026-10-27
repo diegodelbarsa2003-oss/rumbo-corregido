@@ -1,0 +1,26 @@
+{% extends "layout_acceso.html" %}
+{% from "_campos.html" import campo_password %}
+
+{% block titulo %}Nueva contraseña | {% endblock %}
+{% block rol %}{{ rol }}{% endblock %}
+
+{% block mensaje %}
+  <h2>{{ r.titular }}</h2>
+  <p>{{ r.bajada }}</p>
+{% endblock %}
+
+{% block formulario %}
+  <h1>Crea una nueva contraseña</h1>
+  <p class="intro">Elige una contraseña que no hayas usado antes en esta cuenta.</p>
+
+  <form method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {{ campo_password("password", "Nueva contraseña", error=errores.password, ayuda="Mínimo 8 caracteres, con letras y números.") }}
+    {{ campo_password("confirmar", "Confirmar nueva contraseña", error=errores.confirmar) }}
+    <button class="boton" type="submit">Guardar contraseña</button>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/acceso.js') }}"></script>
+{% endblock %}

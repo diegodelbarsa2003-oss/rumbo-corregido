@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block titulo %}Editar hotel | {% endblock %}
+{% block rol %}administrador{% endblock %}
+{% block cuerpo %}
+{% include "_barra_admin.html" %}
+
+<main class="panel panel--angosto" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>Editar hotel</h1>
+  <p class="intro">Registra los horarios de check-in/check-out y las políticas y condiciones del hotel.</p>
+
+  <form method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="campo{% if errores.destino_id %} campo--error{% endif %}">
+      <label for="destino_id">Destino</label>
+      <select id="destino_id" name="destino_id" required>
+        <option value="">Elige un destino</option>
+        {% for d in destinos %}
+        <option value="{{ d.id }}"{% if datos.destino_id == d.id %} selected{% endif %}>{{ d.nombre }} ({{ d.pais }})</option>
+        {% endfor %}
+      </select>
+      <p class="msg msg--error">{{ errores.destino_id }}</p>
+    </div>
+
+    <div class="campo{% if errores.nombre %} campo--error{% endif %}">
+      <label for="nombre">Nombre del hotel</label>
+      <input id="nombre" name="nombre" type="text" value="{{ datos.nombre }}" required>
+      <p class="msg msg--error">{{ errores.nombre }}</p>
+    </div>
+
+    <div class="campo">
+      <label for="direccion">Dirección</label>
+      <input id="direccion" name="direccion" type="text" value="{{ datos.direccion }}">
+    </div>
+
+    <div class="fila">
+      <div class="campo">
+        <label for="telefono">Teléfono</label>
+        <input id="telefono" name="telefono" type="text" value="{{ datos.telefono }}">
+      </div>
+      <div class="campo{% if errores.correo %} campo--error{% endif %}">
+        <label for="correo">Correo</label>
+        <input id="correo" name="correo" type="text" value="{{ datos.correo }}">
+        <p class="msg msg--error">{{ errores.correo }}</p>
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="campo{% if errores.checkin %} campo--error{% endif %}">
+        <label for="checkin">Hora de check-in</label>
+        <input id="checkin" name="checkin" type="time" value="{{ datos.checkin or '14:00' }}" required>
+        <p class="msg msg--error">{{ errores.checkin }}</p>
+      </div>
+      <div class="campo{% if errores.checkout %} campo--error{% endif %}">
+        <label for="checkout">Hora de check-out</label>
+        <input id="checkout" name="checkout" type="time" value="{{ datos.checkout or '12:00' }}" required>
+        <p class="msg msg--error">{{ errores.checkout }}</p>
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="politicas">Políticas y condiciones del hotel</label>
+      <textarea id="politicas" name="politicas" rows="5"
+        placeholder="Cancelaciones, mascotas, restricciones de hospedaje, etc.">{{ datos.politicas or '' }}</textarea>
+    </div>
+
+    <button class="boton" type="submit">Guardar cambios</button>
+    <a class="volver" href="{{ url_for('admin_operacion') }}">Cancelar</a>
+  </form>
+</main>
+{% endblock %}

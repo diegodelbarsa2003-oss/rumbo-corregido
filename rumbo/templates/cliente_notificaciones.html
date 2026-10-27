@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Notificaciones | {% endblock %}
+{% block rol %}cliente{% endblock %}
+{% block cuerpo %}
+{% include "_barra_cliente.html" %}
+
+<main class="panel panel--angosto" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>Notificaciones</h1>
+  <p class="intro">
+    Aquí te avisamos sobre cambios de itinerario o de información del destino en los paquetes
+    que ya reservaste.
+  </p>
+
+  {% if not notificaciones %}
+    <p class="intro">Todavía no tienes notificaciones. Te avisaremos aquí si algo cambia en un
+      viaje que ya reservaste.</p>
+  {% else %}
+    <ul class="comentarios">
+      {% for n in notificaciones %}
+      <li>
+        <strong>{{ n.creado_en }}</strong>
+        <p>{{ n.texto }}</p>
+        {% if n.paquete_id %}
+        <a class="boton boton--enlace" href="{{ url_for('cliente_paquete_detalle', paquete_id=n.paquete_id) }}">Ver paquete</a>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</main>
+{% endblock %}

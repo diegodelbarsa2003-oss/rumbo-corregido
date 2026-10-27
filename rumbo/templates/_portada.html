@@ -1,0 +1,45 @@
+{# Banner rotativo + título + tarjetas de destinos. Variable `publico`: True en la portada sin sesión. #}
+{% from "_foto.html" import foto %}
+{% if destinos %}
+{% set slides = destinos[:3] %}
+<section class="banner" data-banner aria-roledescription="carrusel" aria-label="Destinos destacados">
+  {% for d in slides %}
+  {% set url = foto_destino(d.nombre, d.imagen) %}
+  <article class="banner__slide{% if loop.first %} is-activa{% endif %}" aria-hidden="{{ 'false' if loop.first else 'true' }}">
+    <div class="banner__texto">
+      <p class="banner__etiqueta">{{ d.pais }}</p>
+      <h2>Descubre {{ d.nombre }}</h2>
+      <p>{{ d.descripcion }}</p>
+      {% if d.desde %}<p class="banner__precio">Paquetes desde <strong>{{ d.desde | cop }}</strong> por persona</p>{% endif %}
+      <a class="banner__boton" href="{{ url_for('acceso', rol='cliente') if publico else url_for('cliente_paquetes', destino_id=d.id) }}">¡Reserva ahora!</a>
+    </div>
+    <div class="banner__foto">
+      {% if url %}<img src="{{ url }}" alt="Foto de {{ d.nombre }}" referrerpolicy="no-referrer"{% if not loop.first %} loading="lazy"{% endif %} onerror="this.remove()">{% endif %}
+    </div>
+  </article>
+  {% endfor %}
+  <button class="banner__flecha banner__flecha--ant" type="button" data-banner-ant aria-label="Anterior">&#8249;</button>
+  <button class="banner__flecha banner__flecha--sig" type="button" data-banner-sig aria-label="Siguiente">&#8250;</button>
+  <div class="banner__puntos" role="tablist" aria-label="Elegir destino">
+    {% for d in slides %}<button type="button" data-banner-punto="{{ loop.index0 }}" aria-label="Ver {{ d.nombre }}"{% if loop.first %} class="is-activa"{% endif %}></button>{% endfor %}
+  </div>
+</section>
+
+<section class="portada-destinos" aria-labelledby="titulo-portada">
+  {% set h = "h1" if publico else "h2" %}
+  <{{ h }} id="titulo-portada" class="portada-titulo">Compara paquetes turísticos y reserva al mejor precio</{{ h }}>
+  <p class="portada-destinos__sub">Aventúrate a descubrir nuevos lugares</p>
+  <div class="portada-rejilla">
+    {% for d in destinos %}
+    <a class="portada-card" href="{{ url_for('acceso', rol='cliente') if publico else url_for('cliente_paquetes', destino_id=d.id) }}">
+      {{ foto(d.nombre, d.imagen, "foto--card") }}
+      <span class="portada-card__info">
+        <strong>{{ d.nombre }}</strong>
+        <span>{{ d.pais }} · {{ d.num_paquetes }} paquete{{ 's' if d.num_paquetes != 1 }}</span>
+        {% if d.desde %}<span class="portada-card__precio">Desde {{ d.desde | cop }}</span>{% endif %}
+      </span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

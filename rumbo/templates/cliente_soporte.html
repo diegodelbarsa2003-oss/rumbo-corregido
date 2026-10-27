@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block titulo %}Soporte | {% endblock %}
+{% block rol %}cliente{% endblock %}
+{% block cuerpo %}
+{% include "_barra_cliente.html" %}
+
+<main class="panel panel--angosto" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>Chat de soporte</h1>
+  <p class="intro">Escríbele a un asesor si necesitas ayuda con tu reserva o tu viaje.</p>
+
+  <section class="tarjeta chat">
+    <div class="chat__historial">
+      {% if not mensajes %}
+        <p class="intro">Todavía no has escrito a soporte. Cuéntanos en qué te podemos ayudar.</p>
+      {% endif %}
+      {% for m in mensajes %}
+      <p class="chat__mensaje chat__mensaje--{{ m.autor }}">
+        <span class="chat__autor">{{ "Tú" if m.autor == "cliente" else "Asesor Rumbo" }}</span>
+        {{ m.texto }}
+      </p>
+      {% endfor %}
+    </div>
+
+    <form method="post" class="chat__form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="solo-lectores" for="mensaje">Escribe tu mensaje</label>
+      <textarea id="mensaje" name="mensaje" rows="3" maxlength="500" placeholder="Escribe tu mensaje..." required></textarea>
+      <button class="boton" type="submit">Enviar</button>
+    </form>
+  </section>
+</main>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% from "_iconos.html" import icono %}
+{% set ep = request.endpoint %}
+<header class="barra barra--lateral">
+  <a class="marca marca--barra" href="{{ url_for('panel_admin') }}" aria-label="{{ app_nombre }}, ir al panel">
+    <svg width="26" height="26" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 17 L20 11" stroke="var(--sol)" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="11" r="2.6" fill="var(--sol)"/></svg>
+    <span>{{ app_nombre }}</span>
+  </a>
+
+  <nav class="lateral__nav" aria-label="Secciones del administrador">
+    <div class="lateral__grupo">
+      <a href="{{ url_for('panel_admin') }}"{% if ep == 'panel_admin' %} aria-current="page"{% endif %}>{{ icono('panel') }}Panel</a>
+    </div>
+    <div class="lateral__grupo">
+      <p class="lateral__titulo">Catálogo</p>
+      <a href="{{ url_for('admin_paquetes') }}"{% if ep in ('admin_paquetes', 'admin_paquete_nuevo', 'admin_paquete_editar') %} aria-current="page"{% endif %}>{{ icono('paquetes') }}Paquetes</a>
+      <a href="{{ url_for('admin_proveedores') }}"{% if ep in ('admin_proveedores', 'admin_proveedor_nuevo', 'admin_proveedor_editar') %} aria-current="page"{% endif %}>{{ icono('proveedores') }}Proveedores</a>
+    </div>
+    <div class="lateral__grupo">
+      <p class="lateral__titulo">Operación</p>
+      <a href="{{ url_for('admin_operacion') }}"{% if ep in ('admin_operacion', 'admin_hotel_editar', 'admin_paquete_recursos') %} aria-current="page"{% endif %}>{{ icono('operacion') }}Hoteles, transporte y vuelos</a>
+    </div>
+    <div class="lateral__grupo">
+      <p class="lateral__titulo">Negocio</p>
+      <a href="{{ url_for('admin_clientes') }}"{% if ep in ('admin_clientes', 'admin_cliente_editar') %} aria-current="page"{% endif %}>{{ icono('clientes') }}Clientes</a>
+      <a href="{{ url_for('admin_pagos_proveedores') }}"{% if ep == 'admin_pagos_proveedores' %} aria-current="page"{% endif %}>{{ icono('pagos') }}Pagos a proveedores</a>
+      <a href="{{ url_for('admin_reportes') }}"{% if ep == 'admin_reportes' %} aria-current="page"{% endif %}>{{ icono('reportes') }}Reportes</a>
+    </div>
+    <div class="lateral__grupo">
+      <p class="lateral__titulo">Ayuda</p>
+      <a href="{{ url_for('requerimientos') }}"{% if ep == 'requerimientos' %} aria-current="page"{% endif %}>{{ icono('requisitos') }}Requerimientos</a>
+    </div>
+  </nav>
+
+  <div class="lateral__pie">
+    <div class="lateral__usuario">
+      <span class="avatar" aria-hidden="true">{{ session.nombre[:1] | upper }}</span>
+      <div><strong>{{ session.nombre_completo }}</strong><span>Administrador</span></div>
+    </div>
+    <div class="acciones-fila">
+      <a class="boton boton--claro" href="{{ url_for('perfil', rol='administrador') }}">Mi perfil</a>
+      <form method="post" action="{{ url_for('salir') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="boton boton--claro" type="submit">Salir</button>
+      </form>
+    </div>
+  </div>
+</header>

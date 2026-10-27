@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block titulo %}Reportes | {% endblock %}
+{% block rol %}administrador{% endblock %}
+{% block cuerpo %}
+{% include "_barra_admin.html" %}
+
+<main class="panel" id="contenido" data-secciones>
+  {% include "_mensajes.html" %}
+  <h1>Reportes</h1>
+
+  <section class="tarjeta">
+    <h2>Reporte general de la agencia</h2>
+    <p class="intro">Ventas, costos, ingresos, pagos a proveedores, disponibilidad y estado operativo, de todo lo registrado hasta hoy.</p>
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <tbody>
+          <tr><th scope="row">Ventas totales (histórico)</th><td>{{ resumen_general.ventas | cop }}</td></tr>
+          <tr><th scope="row">Costos operativos registrados</th><td>{{ resumen_general.costos | cop }}</td></tr>
+          <tr><th scope="row">Ingreso neto estimado (ventas − costos)</th>
+              <td><strong>{{ resumen_general.ingreso_neto | cop }}</strong></td></tr>
+          <tr><th scope="row">Pagado a proveedores</th><td>{{ resumen_general.pagos_proveedores_pagado | cop }}</td></tr>
+          <tr><th scope="row">Pendiente con proveedores</th>
+              <td class="texto-error">{{ resumen_general.pagos_proveedores_pendiente | cop }}</td></tr>
+          <tr><th scope="row">Cupos totales (fechas futuras)</th><td>{{ resumen_general.cupos_totales }}</td></tr>
+          <tr><th scope="row">Cupos ocupados / libres</th>
+              <td>{{ resumen_general.cupos_ocupados }} ocupados · {{ resumen_general.cupos_libres }} libres</td></tr>
+          <tr><th scope="row">Paquetes operativos / incompletos</th>
+              <td>{{ resumen_general.paquetes_operativos }} operativos ·
+                  <span class="texto-error">{{ resumen_general.paquetes_incompletos }} incompletos</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Reservas por fecha, destino, estado y paquete</h2>
+    <form class="filtros" method="get">
+      <div class="campo">
+        <label for="desde">Desde</label>
+        <input id="desde" name="desde" type="date" value="{{ desde }}">
+      </div>
+      <div class="campo">
+        <label for="hasta">Hasta</label>
+        <input id="hasta" name="hasta" type="date" value="{{ hasta }}">
+      </div>
+      <div class="campo">
+        <label for="destino_id">Destino</label>
+        <select id="destino_id" name="destino_id">
+          <option value="">Todos</option>
+          {% for d in destinos %}
+          <option value="{{ d.id }}"{% if f_destino == d.id %} selected{% endif %}>{{ d.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="estado_reserva">Estado de la reserva</label>
+        <select id="estado_reserva" name="estado_reserva">
+          <option value="">Todos</option>
+          {% for e in ("pendiente", "confirmada", "cancelada", "finalizada") %}
+          <option value="{{ e }}"{% if f_estado == e %} selected{% endif %}>{{ e|capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="paquete_id">Paquete</label>
+        <select id="paquete_id" name="paquete_id">
+          <option value="">Todos</option>
+          {% for p in paquetes_todos %}
+          <option value="{{ p.id }}"{% if f_paquete == p.id %} selected{% endif %}>{{ p.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="boton" type="submit">Consultar</button>
+    </form>
+
+    {% if not reservas_filtradas %}
+    <p class="intro">No hay reservas que coincidan con este filtro.</p>
+    {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th scope="col">Código</th><th scope="col">Cliente</th><th scope="col">Paquete</th>
+            <th scope="col">Destino</th><th scope="col">Fecha de viaje</th><th scope="col">Estado</th>
+            <th scope="col">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reservas_filtradas %}
+          <tr>
+            <td>{{ r.codigo }}</td>
+            <td>{{ r.cliente_nombre }}</td>
+            <td>{{ r.paquete_nombre }}</td>
+            <td>{{ r.destino_nombre }}</td>
+            <td>{{ r.fecha_viaje }}</td>
+            <td><span class="estado estado--{{ 'listo' if r.estado in ('confirmada','finalizada') else 'pendiente' }}">
+              {{ r.estado | capitalize }}</span></td>
+            <td>{{ r.total | cop }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="tarjeta">
+  <h2>Ventas por período</h2>
+  <p class="intro">Usa el mismo filtro de fechas de arriba para consultar las ventas (pagos aprobados) del período.</p>
+
+  <h2>Total del período: {{ total_periodo | cop }}</h2>
+
+  <h2>Ventas por paquete</h2>
+  {% if not por_paquete %}
+    <p class="intro">No hubo ventas en este período.</p>
+  {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Paquete</th><th scope="col">Número de ventas</th><th scope="col">Total vendido</th></tr></thead>
+        <tbody>
+          {% for fila in por_paquete %}
+          <tr>
+            <th scope="row">{{ fila.nombre }}</th>
+            <td>{{ fila.num_ventas }}</td>
+            <td>{{ fila.total | cop }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <h2>Detalle de pagos</h2>
+  {% if not pagos %}
+    <p class="intro">No hay pagos registrados en este período.</p>
+  {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th scope="col">Fecha de pago</th>
+            <th scope="col">Reserva</th>
+            <th scope="col">Paquete</th>
+            <th scope="col">Personas</th>
+            <th scope="col">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pg in pagos %}
+          <tr>
+            <td>{{ pg.creado_en }}</td>
+            <th scope="row">{{ pg.codigo }}</th>
+            <td>{{ pg.paquete_nombre }}</td>
+            <td>{{ pg.num_personas }}</td>
+            <td>{{ pg.monto | cop }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+  </section>
+</main>
+{% endblock %}

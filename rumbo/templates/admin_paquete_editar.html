@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+{% block titulo %}Editar {{ p.nombre }} | {% endblock %}
+{% block rol %}administrador{% endblock %}
+{% block cuerpo %}
+{% include "_barra_admin.html" %}
+
+<main class="panel" id="contenido" data-secciones>
+  {% include "_mensajes.html" %}
+  <h1>Editar paquete: {{ p.nombre }}</h1>
+  <p class="intro">
+    <a class="volver" href="{{ url_for('admin_paquetes') }}">&larr; Volver a paquetes</a>
+    ·
+    <a href="{{ url_for('admin_paquete_recursos', paquete_id=p.id) }}">Recursos operativos (hoteles, transporte, vuelos) →</a>
+  </p>
+
+  <section class="tarjeta" data-fijo>
+    <h2>Estado operativo</h2>
+    {% if estado_operativo.listo %}
+      <p class="aviso aviso--ok">Este paquete está listo para habilitarse para reservas: tiene fechas con cupo, itinerario e incluidos registrados.</p>
+    {% else %}
+      <p class="aviso aviso--error">Este paquete todavía no está completo para recibir reservas con tranquilidad:</p>
+      <ul class="lista-check">
+        {% for problema in estado_operativo.problemas %}
+        <li class="texto-error">{{ problema }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+
+  <section class="tarjeta">
+    <h2>Datos generales</h2>
+    <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="accion" value="datos">
+
+      <div class="campo{% if errores.destino_id %} campo--error{% endif %}">
+        <label for="destino_id">Destino</label>
+        <select id="destino_id" name="destino_id" required>
+          {% for d in destinos %}
+          <option value="{{ d.id }}"{% if datos.destino_id == d.id %} selected{% endif %}>{{ d.nombre }} ({{ d.pais }})</option>
+          {% endfor %}
+        </select>
+        <p class="msg msg--error">{{ errores.destino_id }}</p>
+      </div>
+
+      <div class="campo{% if errores.nombre %} campo--error{% endif %}">
+        <label for="nombre">Nombre del paquete</label>
+        <input id="nombre" name="nombre" type="text" value="{{ datos.nombre }}" required>
+        <p class="msg msg--error">{{ errores.nombre }}</p>
+      </div>
+
+      <div class="campo{% if errores.categoria %} campo--error{% endif %}">
+        <label for="categoria">Categoría</label>
+        <select id="categoria" name="categoria" required>
+          {% for clave, etiqueta in categorias.items() %}
+          <option value="{{ clave }}"{% if datos.categoria == clave %} selected{% endif %}>{{ etiqueta }}</option>
+          {% endfor %}
+        </select>
+        <p class="msg msg--error">{{ errores.categoria }}</p>
+      </div>
+
+      <div class="campo{% if errores.resumen %} campo--error{% endif %}">
+        <label for="resumen">Descripción breve</label>
+        <textarea id="resumen" name="resumen" rows="3" required>{{ datos.resumen }}</textarea>
+        <p class="msg msg--error">{{ errores.resumen }}</p>
+      </div>
+
+      <div class="fila">
+        <div class="campo{% if errores.duracion_dias %} campo--error{% endif %}">
+          <label for="duracion_dias">Duración (días)</label>
+          <input id="duracion_dias" name="duracion_dias" type="number" min="1" max="60" value="{{ datos.duracion_dias }}" required>
+          <p class="msg msg--error">{{ errores.duracion_dias }}</p>
+        </div>
+        <div class="campo{% if errores.precio_persona %} campo--error{% endif %}">
+          <label for="precio_persona">Precio por persona (COP)</label>
+          <input id="precio_persona" name="precio_persona" type="number" min="1" step="10000" value="{{ datos.precio_persona }}" required>
+          <p class="msg msg--error">{{ errores.precio_persona }}</p>
+        </div>
+      </div>
+
+      <div class="fila">
+        <div class="campo{% if errores.plazo_cancelacion_dias %} campo--error{% endif %}">
+          <label for="plazo_cancelacion_dias">Plazo de cancelación (días)</label>
+          <input id="plazo_cancelacion_dias" name="plazo_cancelacion_dias" type="number" min="0" max="60" value="{{ datos.plazo_cancelacion_dias }}" required>
+          <p class="msg msg--error">{{ errores.plazo_cancelacion_dias }}</p>
+        </div>
+        <div class="campo">
+          <label for="permite_cuotas">Pago en cuotas</label>
+          <label class="servicio"><input id="permite_cuotas" name="permite_cuotas" type="checkbox"
+                {% if datos.permite_cuotas %}checked{% endif %}> Permitir pagar en cuotas</label>
+        </div>
+      </div>
+
+      <button class="boton" type="submit">Guardar datos generales</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Itinerario <span class="intro">Cada cambio avisa a los clientes con reservas activas</span></h2>
+    {% if not itinerario %}
+      <p class="intro">Todavía no hay actividades en el itinerario.</p>
+    {% else %}
+      <ol class="itinerario">
+        {% for it in itinerario %}
+        <li>
+          <strong>Día {{ it.dia_numero }}: {{ it.titulo }}</strong>
+          <p>{{ it.descripcion }}</p>
+          <form method="post" action="{{ url_for('admin_itinerario_eliminar', paquete_id=p.id, item_id=it.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="boton boton--claro boton--peligro" type="submit">Eliminar</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ol>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('admin_itinerario_agregar', paquete_id=p.id) }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label for="dia_numero">Día</label>
+        <input id="dia_numero" name="dia_numero" type="number" min="1" max="60" required>
+      </div>
+      <div class="campo">
+        <label for="titulo">Título</label>
+        <input id="titulo" name="titulo" type="text" required>
+      </div>
+      <div class="campo">
+        <label for="descripcion">Descripción</label>
+        <input id="descripcion" name="descripcion" type="text">
+      </div>
+      <button class="boton" type="submit">Agregar actividad</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Incluidos</h2>
+    {% if incluidos %}
+    <ul class="lista-check">
+      {% for i in incluidos %}
+      <li>{{ i.texto }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+      <p class="intro">Todavía no hay elementos incluidos.</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('admin_incluido_agregar', paquete_id=p.id) }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label for="texto">Nuevo elemento incluido</label>
+        <input id="texto" name="texto" type="text" placeholder="Por ejemplo: Desayunos incluidos" required>
+      </div>
+      <button class="boton" type="submit">Agregar</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Servicios adicionales</h2>
+    {% if not servicios %}
+      <p class="intro">Todavía no hay servicios adicionales.</p>
+    {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Tipo</th><th scope="col">Nombre</th><th scope="col">Precio</th><th scope="col">Estado</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for s in servicios %}
+          <tr>
+            <td>{{ tipos_servicio.get(s.tipo, s.tipo) }}</td>
+            <td>{{ s.nombre }}</td>
+            <td>{{ s.precio_persona | cop }}</td>
+            <td><span class="estado estado--{{ 'listo' if s.activo else 'pendiente' }}">{{ 'Activo' if s.activo else 'Inactivo' }}</span></td>
+            <td>
+              <form method="post" action="{{ url_for('admin_servicio_estado', paquete_id=p.id, item_id=s.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">{{ 'Desactivar' if s.activo else 'Activar' }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    <form method="post" action="{{ url_for('admin_servicio_agregar', paquete_id=p.id) }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label for="tipo">Tipo</label>
+        <select id="tipo" name="tipo" required>
+          {% for clave, etiqueta in tipos_servicio.items() %}
+          <option value="{{ clave }}">{{ etiqueta }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="nombre_servicio">Nombre</label>
+        <input id="nombre_servicio" name="nombre" type="text" required>
+      </div>
+      <div class="campo">
+        <label for="precio_servicio">Precio por persona (COP)</label>
+        <input id="precio_servicio" name="precio_persona" type="number" min="1" step="5000" required>
+      </div>
+      <button class="boton" type="submit">Agregar servicio</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Versiones del paquete</h2>
+    <p class="intro">
+      Crea distintas versiones para comparar combinaciones de servicios, duración y costo.
+      La versión publicada se convierte en la configuración definitiva del paquete.
+    </p>
+
+    {% if versiones %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th scope="col">Versión</th>
+            <th scope="col">Servicios</th>
+            <th scope="col">Duración</th>
+            <th scope="col">Costo</th>
+            <th scope="col">Estado</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in versiones %}
+          <tr>
+            <th scope="row">{{ v.nombre_version }}</th>
+            <td>
+              {% if v.servicios %}
+                {% for sv in v.servicios %}
+                  {{ sv.nombre }}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                Sin servicios adicionales
+              {% endif %}
+            </td>
+            <td>{{ v.duracion_dias }} días</td>
+            <td>{{ v.costo_total | cop }}</td>
+            <td><span class="estado estado--{{ 'listo' if v.estado == 'publicada' else 'pendiente' }}">
+              {{ 'Publicada' if v.estado == 'publicada' else 'Borrador' }}
+            </span></td>
+            <td><div class="acciones-fila">
+              {% if v.estado != 'publicada' %}
+              <form method="post" action="{{ url_for('admin_paquete_version_publicar', paquete_id=p.id, version_id=v.id) }}"
+                    onsubmit="return confirm('¿Publicar esta versión como definitiva?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton" type="submit">Publicar</button>
+              </form>
+              <form method="post" action="{{ url_for('admin_paquete_version_eliminar', paquete_id=p.id, version_id=v.id) }}"
+                    onsubmit="return confirm('¿Eliminar este borrador?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro boton--peligro" type="submit">Eliminar</button>
+              </form>
+              {% endif %}
+            </div></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="intro">Todavía no hay versiones guardadas.</p>
+    {% endif %}
+
+    <h3>Crear nueva versión</h3>
+    <form method="post" action="{{ url_for('admin_paquete_version_crear', paquete_id=p.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="fila">
+        <div class="campo">
+          <label for="nombre_version">Nombre de la versión</label>
+          <input id="nombre_version" name="nombre_version" type="text" placeholder="Ej. Versión familiar" required>
+        </div>
+        <div class="campo">
+          <label for="version_duracion">Duración (días)</label>
+          <input id="version_duracion" name="duracion_dias" type="number" min="1" max="60"
+                 value="{{ datos.duracion_dias }}" required>
+        </div>
+        <div class="campo">
+          <label for="version_costo">Costo por persona (COP)</label>
+          <input id="version_costo" name="costo_total" type="number" min="0" step="10000"
+                 value="{{ datos.precio_persona }}" required>
+        </div>
+      </div>
+
+      <fieldset class="campo">
+        <legend>Combinación de servicios adicionales</legend>
+        {% if servicios %}
+          {% for sv in servicios %}
+          <label class="servicio">
+            <input type="checkbox" name="servicios_ids" value="{{ sv.id }}" {% if sv.activo %}checked{% endif %}>
+            {{ sv.nombre }} — {{ sv.precio_persona | cop }}
+          </label>
+          {% endfor %}
+        {% else %}
+          <p class="intro">Este paquete no tiene servicios adicionales registrados todavía.</p>
+        {% endif %}
+      </fieldset>
+
+      <button class="boton" type="submit">Guardar versión como borrador</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Fechas de salida y cupos</h2>
+    {% if not salidas %}
+      <p class="intro">Todavía no hay fechas de salida. Sin al menos una, el paquete no se puede reservar.</p>
+    {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Fecha</th><th scope="col">Cupos totales</th><th scope="col">Cupos disponibles</th>
+               <th scope="col">Actualizar cupos</th></tr></thead>
+        <tbody>
+          {% for s in salidas %}
+          <tr>
+            <th scope="row">{{ s.fecha | fecha_es(true) }}</th>
+            <td>{{ s.cupos_totales }}</td>
+            <td>{{ s.cupos_disponibles }}</td>
+            <td>
+              <form method="post" action="{{ url_for('admin_salida_actualizar', paquete_id=p.id, salida_id=s.id) }}"
+                    class="acciones-fila">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input name="cupos_totales" type="number" min="1" value="{{ s.cupos_totales }}"
+                       class="entrada-corta" required>
+                <button class="boton boton--claro" type="submit">Guardar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    <form method="post" action="{{ url_for('admin_salida_agregar', paquete_id=p.id) }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label for="fecha">Fecha de salida</label>
+        <input id="fecha" name="fecha" type="date" required>
+      </div>
+      <div class="campo">
+        <label for="cupos_totales_nueva">Cupos totales</label>
+        <input id="cupos_totales_nueva" name="cupos_totales" type="number" min="1" required>
+      </div>
+      <button class="boton" type="submit">Agregar fecha</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Promociones</h2>
+    {% if not promociones %}
+    <p class="intro">Todavía no hay promociones para este paquete.</p>
+    {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead>
+          <tr><th scope="col">Nombre</th><th scope="col">Código</th><th scope="col">Descuento</th>
+              <th scope="col">Vigencia</th><th scope="col">Estado</th><th scope="col"></th></tr>
+        </thead>
+        <tbody>
+          {% for promo in promociones %}
+          <tr>
+            <th scope="row">{{ promo.nombre }}</th>
+            <td>{{ promo.codigo or "—" }}</td>
+            <td>{{ (promo.valor ~ "%") if promo.tipo == "porcentaje" else (promo.valor | cop) }}</td>
+            <td>{{ promo.fecha_inicio }} a {{ promo.fecha_fin }}</td>
+            <td><span class="estado estado--{{ 'listo' if promo.activa else 'pendiente' }}">
+              {{ 'Activa' if promo.activa else 'Inactiva' }}</span></td>
+            <td>
+              <form method="post" action="{{ url_for('admin_promocion_estado', promocion_id=promo.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">{{ 'Desactivar' if promo.activa else 'Activar' }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    <h3>Crear promoción</h3>
+    <form method="post" action="{{ url_for('admin_promocion_agregar', paquete_id=p.id) }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label for="promo_nombre">Nombre</label>
+        <input id="promo_nombre" name="nombre" type="text" placeholder="Ej. Promo de temporada" required>
+      </div>
+      <div class="campo">
+        <label for="promo_codigo">Código (opcional)</label>
+        <input id="promo_codigo" name="codigo" type="text" placeholder="Ej. VERANO26">
+      </div>
+      <div class="campo">
+        <label for="promo_tipo">Tipo de descuento</label>
+        <select id="promo_tipo" name="tipo" required>
+          <option value="porcentaje">Porcentaje (%)</option>
+          <option value="monto_fijo">Monto fijo (COP)</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="promo_valor">Valor</label>
+        <input id="promo_valor" name="valor" type="number" min="1" required>
+      </div>
+      <div class="campo">
+        <label for="promo_inicio">Vigente desde</label>
+        <input id="promo_inicio" name="fecha_inicio" type="date" required>
+      </div>
+      <div class="campo">
+        <label for="promo_fin">Vigente hasta</label>
+        <input id="promo_fin" name="fecha_fin" type="date" required>
+      </div>
+      <button class="boton" type="submit">Crear promoción</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Costos operativos</h2>
+    <p class="intro">Alojamiento, transporte, vuelos, actividades y otros gastos asociados a este paquete.</p>
+    {% if not costos %}
+    <p class="intro">Todavía no hay costos registrados.</p>
+    {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Categoría</th><th scope="col">Descripción</th><th scope="col">Monto</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for c in costos %}
+          <tr>
+            <td>{{ categorias_costo.get(c.categoria, c.categoria) }}</td>
+            <td>{{ c.descripcion }}</td>
+            <td>{{ c.monto | cop }}</td>
+            <td>
+              <form method="post" action="{{ url_for('admin_costo_eliminar', paquete_id=p.id, costo_id=c.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro boton--peligro" type="submit">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+          <tr><th scope="row">Total</th><td></td><td><strong>{{ total_costos | cop }}</strong></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    <form method="post" action="{{ url_for('admin_costo_agregar', paquete_id=p.id) }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label for="costo_categoria">Categoría</label>
+        <select id="costo_categoria" name="categoria" required>
+          {% for clave, etiqueta in categorias_costo.items() %}
+          <option value="{{ clave }}">{{ etiqueta }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="costo_descripcion">Descripción</label>
+        <input id="costo_descripcion" name="descripcion" type="text" placeholder="Ej. 2 noches hotel Caribe Azul" required>
+      </div>
+      <div class="campo">
+        <label for="costo_monto">Monto (COP)</label>
+        <input id="costo_monto" name="monto" type="number" min="0" step="10000" required>
+      </div>
+      <button class="boton" type="submit">Agregar costo</button>
+    </form>
+  </section>
+</main>
+{% endblock %}

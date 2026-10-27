@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block titulo %}Requerimientos | {% endblock %}
+{% block rol %}{{ rol }}{% endblock %}
+{% block cuerpo %}
+{% if rol == 'cliente' %}
+  {% include "_barra_cliente.html" %}
+{% elif rol == 'administrador' %}
+  {% include "_barra_admin.html" %}
+{% else %}
+<header class="barra barra--superior">
+  <a class="marca marca--barra" href="{{ url_for('inicio') }}">
+    <svg width="26" height="26" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 17 L20 11" stroke="var(--sol)" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="11" r="2.6" fill="var(--sol)"/></svg>
+    <span>{{ app_nombre }}</span>
+  </a>
+  <nav class="barra__nav" aria-label="Navegación"><a href="{{ url_for('inicio') }}">Volver al inicio</a></nav>
+</header>
+{% endif %}
+
+<main class="panel" id="contenido">
+  <h1>Requerimientos del sistema</h1>
+  <p class="intro">
+    Los {{ total }} requerimientos funcionales de {{ app_nombre }}, agrupados por tema. Cada uno indica quién lo usa
+    y en qué pantalla se encuentra{% if not rol %}. Inicia sesión para abrir las pantallas directamente{% endif %}.
+  </p>
+
+  <div class="req-herramientas">
+    <div class="campo">
+      <label for="req-buscar">Buscar un requerimiento</label>
+      <input id="req-buscar" type="search" placeholder="Por ejemplo: pago, hotel, reporte o RF-17" autocomplete="off">
+    </div>
+    <div>
+      <p class="etiqueta" id="req-quien">Quién lo usa</p>
+      <div class="req-filtros" role="group" aria-labelledby="req-quien">
+        <button type="button" data-actor="" aria-pressed="true">Todos</button>
+        <button type="button" data-actor="Cliente" aria-pressed="false">Cliente</button>
+        <button type="button" data-actor="Administrador" aria-pressed="false">Administrador</button>
+        <button type="button" data-actor="Sistema" aria-pressed="false">Sistema</button>
+      </div>
+    </div>
+  </div>
+  <p class="intro" id="req-conteo" role="status" aria-live="polite"></p>
+
+  {% for modulo, items in grupos.items() %}
+  <section class="req-grupo" data-grupo>
+    <div class="req-grupo__cabecera">
+      <h2>{{ modulo }}</h2>
+      <span>{{ items|length }} requerimiento{{ 's' if items|length != 1 }}</span>
+    </div>
+    <ul class="req-lista">
+      {% for i in items %}
+      <li class="req-item" data-actor="{{ i.actor }}" data-texto="{{ (i.id ~ ' ' ~ i.texto ~ ' ' ~ i.donde ~ ' ' ~ i.actor) | lower }}">
+        <span class="req-id">{{ i.id }}</span>
+        <p class="req-texto">{{ i.texto }}</p>
+        <div class="req-donde">
+          <span>{{ i.actor }}</span>
+          {% if i.enlace %}<a href="{{ i.enlace }}">{{ i.donde }}</a>{% else %}<span>{{ i.donde }}</span>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  "use strict";
+  var buscar = document.getElementById("req-buscar");
+  var botones = document.querySelectorAll(".req-filtros button");
+  var items = document.querySelectorAll(".req-item");
+  var grupos = document.querySelectorAll("[data-grupo]");
+  var conteo = document.getElementById("req-conteo");
+  var actor = "";
+
+  function normalizar(t) { return t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+
+  function aplicar() {
+    var q = normalizar(buscar.value.trim());
+    var visibles = 0;
+    items.forEach(function (li) {
+      var okActor = !actor || li.dataset.actor.indexOf(actor) !== -1;
+      var okTexto = !q || normalizar(li.dataset.texto).indexOf(q) !== -1;
+      li.hidden = !(okActor && okTexto);
+      if (!li.hidden) visibles++;
+    });
+    grupos.forEach(function (g) { g.hidden = !g.querySelector(".req-item:not([hidden])"); });
+    conteo.textContent = visibles === items.length
+      ? "Mostrando los " + visibles + " requerimientos."
+      : visibles ? "Mostrando " + visibles + " de " + items.length + "." : "Ningún requerimiento coincide. Prueba con otra palabra.";
+  }
+
+  botones.forEach(function (b) {
+    b.addEventListener("click", function () {
+      actor = b.dataset.actor;
+      botones.forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      aplicar();
+    });
+  });
+  buscar.addEventListener("input", aplicar);
+  aplicar();
+})();
+</script>
+{% endblock %}

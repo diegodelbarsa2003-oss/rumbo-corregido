@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block titulo %}Comparar paquetes | {% endblock %}
+{% block rol %}cliente{% endblock %}
+{% block cuerpo %}
+{% include "_barra_cliente.html" %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+  <a class="volver" href="{{ url_for('cliente_paquetes') }}">Volver a paquetes</a>
+  <h1>Comparar paquetes</h1>
+  <p class="intro">Así se ven lado a lado los paquetes que elegiste.</p>
+
+  <div class="tabla-envoltura">
+    <table class="tabla tabla-comparar">
+      <thead>
+        <tr>
+          <th scope="col">Característica</th>
+          {% for item in paquetes %}<th scope="col">{{ item.p.nombre }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Destino</th>
+          {% for item in paquetes %}<td>{{ item.p.destino_nombre }}, {{ item.p.pais }}</td>{% endfor %}</tr>
+        <tr><th scope="row">Categoría</th>
+          {% for item in paquetes %}<td>{{ item.p.categoria|capitalize }}</td>{% endfor %}</tr>
+        <tr><th scope="row">Duración</th>
+          {% for item in paquetes %}<td>{{ item.p.duracion_dias }} días</td>{% endfor %}</tr>
+        <tr><th scope="row">Precio por persona</th>
+          {% for item in paquetes %}<td>{{ item.p.precio_persona | cop }}</td>{% endfor %}</tr>
+        <tr><th scope="row">Pago en cuotas</th>
+          {% for item in paquetes %}<td>{{ "Sí" if item.p.permite_cuotas else "No" }}</td>{% endfor %}</tr>
+        <tr><th scope="row">Plazo de cancelación</th>
+          {% for item in paquetes %}<td>{{ item.p.plazo_cancelacion_dias }} días antes</td>{% endfor %}</tr>
+        <tr><th scope="row">Próxima salida con cupos</th>
+          {% for item in paquetes %}
+          <td>
+            {% set proxima = item.salidas | selectattr("cupos_disponibles", "gt", 0) | list %}
+            {{ proxima[0].fecha | fecha_es(true) if proxima else "Sin cupos" }}
+          </td>
+          {% endfor %}</tr>
+        <tr><th scope="row">Calificación promedio</th>
+          {% for item in paquetes %}<td>{{ (item.resumen.promedio ~ "★") if item.resumen.n else "Sin calificar" }}</td>{% endfor %}</tr>
+        <tr><th scope="row">Incluye</th>
+          {% for item in paquetes %}
+          <td><ul class="lista-check lista-check--compacta">{% for i in item.incluidos %}<li>{{ i.texto }}</li>{% endfor %}</ul></td>
+          {% endfor %}</tr>
+        <tr><th scope="row"></th>
+          {% for item in paquetes %}
+          <td><a class="boton boton--enlace" href="{{ url_for('cliente_paquete_detalle', paquete_id=item.p.id) }}">Ver y reservar</a></td>
+          {% endfor %}</tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+{% endblock %}

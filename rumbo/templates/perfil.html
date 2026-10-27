@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, campo_password %}
+{% block titulo %}Mi perfil | {% endblock %}
+{% block rol %}{{ rol }}{% endblock %}
+
+{% block cuerpo %}
+{% if rol == 'cliente' %}
+  {% include "_barra_cliente.html" %}
+{% else %}
+  {% include "_barra_admin.html" %}
+{% endif %}
+
+<main class="panel panel--angosto" id="contenido">
+  {% include "_mensajes.html" %}
+  <a class="volver" href="{{ url_for(r.panel) }}">Volver al panel</a>
+  <h1>Mi perfil</h1>
+
+  <section class="tarjeta">
+    <h2>Datos personales</h2>
+    <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="accion" value="datos">
+      <div class="fila">
+        {{ campo("nombres", "Nombres", valor=datos.nombres, error=errores.nombres, autocomplete="given-name") }}
+        {{ campo("apellidos", "Apellidos", valor=datos.apellidos, error=errores.apellidos, autocomplete="family-name") }}
+      </div>
+      {{ campo("correo", "Correo electrónico", tipo="email", valor=datos.correo, error=errores.correo, autocomplete="email") }}
+      <button class="boton" type="submit">Guardar cambios</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Cambiar contraseña</h2>
+    <form method="post" action="{{ url_for('cambiar_contrasena', rol=rol) }}" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {{ campo_password("actual", "Contraseña actual", error=errores_pw.actual, autocomplete="current-password") }}
+      {{ campo_password("password", "Nueva contraseña", error=errores_pw.password, ayuda="Mínimo 8 caracteres, con letras y números.") }}
+      {{ campo_password("confirmar", "Confirmar nueva contraseña", error=errores_pw.confirmar) }}
+      <button class="boton" type="submit">Cambiar contraseña</button>
+    </form>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/acceso.js') }}"></script>
+{% endblock %}

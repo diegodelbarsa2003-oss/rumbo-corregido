@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block titulo %}Recursos de {{ p.nombre }} | {% endblock %}
+{% block rol %}administrador{% endblock %}
+{% block cuerpo %}
+{% include "_barra_admin.html" %}
+
+<main class="panel" id="contenido" data-secciones>
+  {% include "_mensajes.html" %}
+  <h1>Recursos operativos: {{ p.nombre }}</h1>
+  <p class="intro">
+    <a class="volver" href="{{ url_for('admin_paquete_editar', paquete_id=p.id) }}">&larr; Volver a editar el paquete</a>
+  </p>
+  <p class="intro">
+    Asigna a este paquete los hoteles, el transporte y los vuelos de cada fecha de salida.
+    Las actividades del itinerario se gestionan en la pestaña "Datos generales" del paquete.
+  </p>
+
+  {% if not salidas %}
+  <p class="aviso aviso--error">Este paquete todavía no tiene fechas de salida; agrega una primero en "Datos generales" antes de asignar recursos.</p>
+  {% endif %}
+
+  {% if conflictos %}
+  <section class="tarjeta" data-fijo>
+    <h2>Conflictos de disponibilidad</h2>
+    <ul>
+      {% for c in conflictos %}<li class="aviso aviso--error">{{ c }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <!-- RF-32: consultar disponibilidad de habitaciones ANTES de asignar nada -->
+  <section class="tarjeta">
+    <h2>Consultar disponibilidad de habitaciones</h2>
+    <p class="intro">Cuántas habitaciones de cada tipo siguen libres en cada fecha de salida de este paquete.</p>
+    {% if not salidas %}
+    <p class="intro">Agrega fechas de salida al paquete para poder consultar esto.</p>
+    {% elif not disponibilidad_habitaciones %}
+    <p class="intro">Todavía no hay tipos de habitación registrados. Ve a <a href="{{ url_for('admin_operacion') }}">Operación</a> para crearlos.</p>
+    {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Fecha</th><th scope="col">Hotel</th><th scope="col">Tipo</th>
+               <th scope="col">Total</th><th scope="col">Ocupadas</th><th scope="col">Libres</th></tr></thead>
+        <tbody>
+          {% for d in disponibilidad_habitaciones %}
+          <tr{% if d.libres <= 0 %} class="fila-conflicto"{% endif %}>
+            <td>{{ d.fecha }}</td><td>{{ d.hotel_nombre }}</td><td>{{ d.tipo }}</td>
+            <td>{{ d.cupos_totales }}</td><td>{{ d.ocupadas }}</td>
+            <td><strong>{{ d.libres if d.libres > 0 else 0 }}</strong>{% if d.libres <= 0 %} (sin cupo){% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- RF-32: hoteles asignados -->
+  <section class="tarjeta">
+    <h2>Hoteles y habitaciones</h2>
+    {% if hoteles_asignados %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Fecha</th><th scope="col">Hotel</th><th scope="col">Tipo</th>
+               <th scope="col">Cantidad</th><th scope="col">Disponibilidad en esa fecha</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for h in hoteles_asignados %}
+          <tr{% if h.asignadas_fecha > h.cupos_totales %} class="fila-conflicto"{% endif %}>
+            <td>{{ h.fecha }}</td><td>{{ h.hotel_nombre }}</td><td>{{ h.tipo }}</td>
+            <td>{{ h.cantidad }}</td>
+            <td>{{ h.asignadas_fecha }} de {{ h.cupos_totales }} habitaciones asignadas en total ese día</td>
+            <td>
+              <form method="post" action="{{ url_for('admin_recurso_hotel_eliminar', paquete_id=p.id, item_id=h.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">Quitar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="intro">Todavía no hay hoteles asignados a este paquete.</p>
+    {% endif %}
+
+    {% if salidas and habitaciones %}
+    <form method="post" action="{{ url_for('admin_recurso_hotel_agregar', paquete_id=p.id) }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label>Fecha de salida</label>
+        <select name="salida_id" required>
+          {% for s in salidas %}<option value="{{ s.id }}">{{ s.fecha }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label>Tipo de habitación</label>
+        <select name="habitacion_id" required>
+          {% for hab in habitaciones %}
+          <option value="{{ hab.id }}">{{ hab.hotel_nombre }} — {{ hab.tipo }} ({{ hab.cupos_totales }} disp. tot.)</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="campo"><label>Cantidad</label><input name="cantidad" type="number" min="1" value="1" required></div>
+      <button class="boton boton--claro" type="submit">+ Asignar habitación</button>
+    </form>
+    {% elif not habitaciones %}
+    <p class="intro">Primero registra hoteles y tipos de habitación en <a href="{{ url_for('admin_operacion') }}">Operación</a>.</p>
+    {% endif %}
+  </section>
+
+  <!-- RF-35/RF-36: transporte -->
+  <section class="tarjeta">
+    <h2>Transporte (conductor + vehículo)</h2>
+    {% if transportes %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Fecha</th><th scope="col">Hora</th><th scope="col">Conductor</th>
+               <th scope="col">Vehículo</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for t in transportes %}
+          <tr>
+            <td>{{ t.fecha }}</td><td>{{ t.hora }}</td><td>{{ t.conductor_nombre }}</td><td>{{ t.placa }}</td>
+            <td>
+              <form method="post" action="{{ url_for('admin_recurso_transporte_eliminar', paquete_id=p.id, item_id=t.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">Quitar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="intro">Todavía no hay transporte asignado a este paquete.</p>
+    {% endif %}
+
+    {% if salidas and conductores and vehiculos %}
+    <form method="post" action="{{ url_for('admin_recurso_transporte_agregar', paquete_id=p.id) }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label>Fecha de salida</label>
+        <select name="salida_id" required>{% for s in salidas %}<option value="{{ s.id }}">{{ s.fecha }}</option>{% endfor %}</select>
+      </div>
+      <div class="campo">
+        <label>Conductor</label>
+        <select name="conductor_id" required>{% for c in conductores %}<option value="{{ c.id }}">{{ c.nombres }} {{ c.apellidos }}</option>{% endfor %}</select>
+      </div>
+      <div class="campo">
+        <label>Vehículo</label>
+        <select name="vehiculo_id" required>{% for v in vehiculos %}<option value="{{ v.id }}">{{ v.placa }} ({{ v.tipo }})</option>{% endfor %}</select>
+      </div>
+      <div class="campo"><label>Hora</label><input name="hora" type="time" value="08:00" required></div>
+      <button class="boton boton--claro" type="submit">+ Asignar transporte</button>
+    </form>
+    {% elif not conductores or not vehiculos %}
+    <p class="intro">Primero registra conductores y vehículos en <a href="{{ url_for('admin_operacion') }}">Operación</a>.</p>
+    {% endif %}
+  </section>
+
+  <!-- RF-38/RF-39/RF-40: vuelos -->
+  <section class="tarjeta">
+    <h2>Vuelos</h2>
+
+    {% if vuelos %}
+    <h3>Consultar disponibilidad de pilotos</h3>
+    <p class="intro">Para la fecha y el horario exacto de cada vuelo de este paquete, quién está libre y quién ya tiene otro vuelo cruzado.</p>
+    {% if not pilotos %}
+    <p class="intro">Todavía no hay pilotos registrados. Ve a <a href="{{ url_for('admin_operacion') }}">Operación</a> para crearlos.</p>
+    {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Vuelo</th><th scope="col">Fecha y horario</th><th scope="col">Piloto</th><th scope="col">Disponibilidad</th></tr></thead>
+        <tbody>
+          {% for v in vuelos %}
+            {% set opciones = opciones_piloto_por_vuelo.get(v.id, []) %}
+            {% for op in opciones %}
+            <tr{% if not op.disponible %} class="fila-conflicto"{% endif %}>
+              {% if loop.first %}
+              <td rowspan="{{ opciones | length }}">{{ v.origen }} → {{ v.destino }}</td>
+              <td rowspan="{{ opciones | length }}">{{ v.fecha }}, {{ v.hora_salida }}–{{ v.hora_llegada }}</td>
+              {% endif %}
+              <td>{{ op.nombre }}</td>
+              <td>
+                {% if op.disponible %}
+                  <span class="estado estado--listo">Disponible</span>
+                {% else %}
+                  <span class="estado estado--pendiente">Ocupado</span>
+                  — ya tiene un vuelo el {{ op.conflicto.fecha }} de {{ op.conflicto.hora_salida }} a {{ op.conflicto.hora_llegada }}
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if vuelos %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th scope="col">Fecha</th><th scope="col">Origen → Destino</th><th scope="col">Horario</th>
+               <th scope="col">Aeronave</th><th scope="col">Piloto</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for v in vuelos %}
+          <tr>
+            <td>{{ v.fecha }}</td><td>{{ v.origen }} → {{ v.destino }}</td>
+            <td>{{ v.hora_salida }} – {{ v.hora_llegada }}</td><td>{{ v.matricula }}</td>
+            <td>
+              {{ v.piloto_nombre or "Sin asignar" }}
+              <form method="post" action="{{ url_for('admin_recurso_vuelo_piloto', paquete_id=p.id, vuelo_id=v.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="piloto_id" required>
+                  <option value="">Asignar piloto...</option>
+                  {% for op in opciones_piloto_por_vuelo.get(v.id, []) %}
+                  <option value="{{ op.id }}">{{ op.nombre }} — {{ 'disponible' if op.disponible else 'ocupado ese horario' }}</option>
+                  {% endfor %}
+                </select>
+                <button class="boton boton--claro" type="submit">Asignar</button>
+              </form>
+            </td>
+            <td>
+              <form method="post" action="{{ url_for('admin_recurso_vuelo_eliminar', paquete_id=p.id, vuelo_id=v.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">Quitar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="intro">Todavía no hay vuelos registrados para este paquete.</p>
+    {% endif %}
+
+    {% if salidas and aeronaves %}
+    <form method="post" action="{{ url_for('admin_recurso_vuelo_agregar', paquete_id=p.id) }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label>Fecha de salida</label>
+        <select name="salida_id" required>{% for s in salidas %}<option value="{{ s.id }}">{{ s.fecha }}</option>{% endfor %}</select>
+      </div>
+      <div class="campo">
+        <label>Aeronave</label>
+        <select name="aeronave_id" required>{% for a in aeronaves %}<option value="{{ a.id }}">{{ a.matricula }} ({{ a.modelo }})</option>{% endfor %}</select>
+      </div>
+      <div class="campo"><label>Origen</label><input name="origen" type="text" required></div>
+      <div class="campo"><label>Destino</label><input name="destino" type="text" required></div>
+      <div class="campo"><label>Hora de salida</label><input name="hora_salida" type="time" value="08:00" required></div>
+      <div class="campo"><label>Hora de llegada</label><input name="hora_llegada" type="time" value="10:00" required></div>
+      <button class="boton boton--claro" type="submit">+ Registrar vuelo</button>
+    </form>
+    {% elif not aeronaves %}
+    <p class="intro">Primero registra aeronaves en <a href="{{ url_for('admin_operacion') }}">Operación</a>.</p>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

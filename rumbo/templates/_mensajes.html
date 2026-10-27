@@ -1,0 +1,5 @@
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+  {% for categoria, texto in mensajes %}
+    <p class="aviso aviso--{{ categoria }}" role="{{ 'alert' if categoria == 'error' else 'status' }}">{{ texto }}</p>
+  {% endfor %}
+{% endwith %}

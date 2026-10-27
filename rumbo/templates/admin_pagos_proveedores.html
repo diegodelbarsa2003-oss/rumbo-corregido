@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block titulo %}Pagos a proveedores | {% endblock %}
+{% block rol %}administrador{% endblock %}
+{% block cuerpo %}
+{% include "_barra_admin.html" %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+  <h1>Pagos a proveedores</h1>
+  <p class="intro">
+    Registra y consulta los pagos realizados y los valores pendientes con hoteles,
+    transportadores y demás proveedores vinculados a los paquetes turísticos.
+  </p>
+
+  <div class="metricas">
+    <div class="metrica"><span class="metrica__nombre">Pagado a proveedores</span><span class="metrica__valor">{{ total_pagado | cop }}</span></div>
+    <div class="metrica metrica--alerta"><span class="metrica__nombre">Pendiente por pagar</span><span class="metrica__valor">{{ total_pendiente | cop }}</span></div>
+  </div>
+
+  <section class="tarjeta">
+    <h2>Registrar un pago a proveedor</h2>
+    <form method="post" action="{{ url_for('admin_pago_proveedor_nuevo') }}" class="fila">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="campo">
+        <label for="tipo_proveedor">Tipo de proveedor</label>
+        <select id="tipo_proveedor" name="tipo_proveedor" required>
+          {% for clave, etiqueta in tipos.items() %}
+          <option value="{{ clave }}">{{ etiqueta }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="nombre_proveedor">Nombre del proveedor</label>
+        <input id="nombre_proveedor" name="nombre_proveedor" type="text" required>
+      </div>
+      <div class="campo">
+        <label for="paquete_id">Paquete relacionado (opcional)</label>
+        <select id="paquete_id" name="paquete_id">
+          <option value="">Sin paquete específico</option>
+          {% for p in paquetes %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="concepto">Concepto</label>
+        <input id="concepto" name="concepto" type="text" placeholder="Ej. Hospedaje 3 noches, 10 habitaciones" required>
+      </div>
+      <div class="campo">
+        <label for="monto">Monto (COP)</label>
+        <input id="monto" name="monto" type="number" min="1" step="10000" required>
+      </div>
+      <button class="boton" type="submit">Registrar pago</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Historial</h2>
+    <nav class="pestanas" aria-label="Filtrar por estado">
+      <a href="{{ url_for('admin_pagos_proveedores') }}"{% if not filtro_estado %} aria-current="page"{% endif %}>Todos</a>
+      <a href="{{ url_for('admin_pagos_proveedores', estado='pendiente') }}"{% if filtro_estado == 'pendiente' %} aria-current="page"{% endif %}>Pendientes</a>
+      <a href="{{ url_for('admin_pagos_proveedores', estado='pagado') }}"{% if filtro_estado == 'pagado' %} aria-current="page"{% endif %}>Pagados</a>
+    </nav>
+
+    {% if not pagos %}
+    <p class="intro">No hay pagos registrados con este filtro.</p>
+    {% else %}
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th scope="col">Proveedor</th><th scope="col">Tipo</th><th scope="col">Paquete</th>
+            <th scope="col">Concepto</th><th scope="col">Monto</th><th scope="col">Estado</th>
+            <th scope="col">Fecha de pago</th><th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pg in pagos %}
+          <tr{% if pg.estado == 'pendiente' %} class="fila-conflicto"{% endif %}>
+            <th scope="row">{{ pg.nombre_proveedor }}</th>
+            <td>{{ tipos.get(pg.tipo_proveedor, pg.tipo_proveedor) }}</td>
+            <td>{{ pg.paquete_nombre or "—" }}</td>
+            <td>{{ pg.concepto }}</td>
+            <td>{{ pg.monto | cop }}</td>
+            <td><span class="estado estado--{{ 'listo' if pg.estado == 'pagado' else 'pendiente' }}">
+              {{ 'Pagado' if pg.estado == 'pagado' else 'Pendiente' }}</span></td>
+            <td>{{ pg.fecha_pago or "—" }}</td>
+            <td>
+              <form method="post" action="{{ url_for('admin_pago_proveedor_estado', pago_id=pg.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="boton boton--claro" type="submit">
+                  {{ 'Marcar pendiente' if pg.estado == 'pagado' else 'Marcar pagado' }}
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

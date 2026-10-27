@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% from "_foto.html" import foto %}
+{% block titulo %}Inicio | {% endblock %}
+{% block rol %}{{ rol }}{% endblock %}
+{% block cuerpo %}
+{% if rol == 'cliente' %}
+  {% include "_barra_cliente.html" %}
+{% else %}
+  {% include "_barra_admin.html" %}
+{% endif %}
+
+<main class="panel" id="contenido">
+  {% include "_mensajes.html" %}
+
+  {% if rol == 'cliente' %}
+  <div class="saludo">
+    <h1>Hola, {{ session.nombre }}</h1>
+    <p class="intro">Aquí ves lo más importante de tus viajes y puedes buscar uno nuevo.</p>
+  </div>
+
+  {% if proximo %}
+  <section class="proximo" aria-label="Tu próximo viaje">
+    <div>
+      <p class="proximo__cuenta">
+        {% if dias_para_viaje == 0 %}Sales hoy{% elif dias_para_viaje == 1 %}Sales mañana{% else %}Faltan {{ dias_para_viaje }} días{% endif %}
+      </p>
+      <h2>{{ proximo.paquete_nombre }}</h2>
+      <p>{{ proximo.fecha_salida | fecha_es }} · {{ proximo.num_personas }} persona{{ 's' if proximo.num_personas != 1 }} · Reserva {{ proximo.codigo }}</p>
+    </div>
+    <a class="boton" href="{{ url_for('cliente_reserva_detalle', reserva_id=proximo.id) }}">Ver mi reserva</a>
+  </section>
+  {% elif total_reservas == 0 %}
+  <section class="vacio">
+    <h2>Todavía no tienes viajes reservados</h2>
+    <p class="intro">Elige un paquete, escoge la fecha y paga en línea. Tu reserva aparecerá aquí.</p>
+    <a class="boton" href="{{ url_for('cliente_paquetes') }}">Explorar paquetes</a>
+  </section>
+  {% endif %}
+
+  {% if por_pagar %}
+  <div class="atencion">
+    <div class="atencion__item">
+      <p><strong>{{ por_pagar }} reserva{{ 's' if por_pagar != 1 }} sin pagar.</strong> Paga para asegurar tu cupo.</p>
+      <a href="{{ url_for('cliente_reservas') }}">Ir a mis reservas</a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% set destinos = destinos_populares %}{% set publico = false %}
+  {% include "_portada.html" %}
+
+  <h2>¿Qué quieres hacer?</h2>
+  <div class="accesos">
+    <a class="acceso" href="{{ url_for('cliente_paquetes') }}">
+      <span class="acceso__icono">{{ icono('paquetes', 22) }}</span>
+      <strong>Ver paquetes</strong><span>Filtra por precio, duración y categoría.</span>
+    </a>
+    <a class="acceso" href="{{ url_for('cliente_destinos') }}">
+      <span class="acceso__icono">{{ icono('destinos', 22) }}</span>
+      <strong>Buscar destinos</strong><span>Por nombre, país o región.</span>
+    </a>
+    <a class="acceso" href="{{ url_for('cliente_reservas') }}">
+      <span class="acceso__icono">{{ icono('reservas', 22) }}</span>
+      <strong>Mis reservas</strong><span>Paga, cambia la fecha o descarga tu comprobante.</span>
+    </a>
+    <a class="acceso" href="{{ url_for('cliente_paises') }}">
+      <span class="acceso__icono">{{ icono('paises', 22) }}</span>
+      <strong>Países disponibles</strong><span>Mira dónde puedes viajar.</span>
+    </a>
+    <a class="acceso" href="{{ url_for('cliente_soporte') }}">
+      <span class="acceso__icono">{{ icono('soporte', 22) }}</span>
+      <strong>Hablar con un asesor</strong><span>Resuelve dudas por chat.</span>
+    </a>
+    <a class="acceso" href="{{ url_for('cliente_notificaciones') }}">
+      <span class="acceso__icono">{{ icono('campana', 22) }}</span>
+      <strong>Avisos{% if notificaciones_sin_leer %} ({{ notificaciones_sin_leer }}){% endif %}</strong><span>Cambios en los viajes que reservaste.</span>
+    </a>
+  </div>
+
+  {% else %}
+  <div class="saludo">
+    <h1>Hola, {{ session.nombre }}</h1>
+    <p class="intro">Este es el estado de la agencia hoy. Lo que necesita tu atención aparece primero.</p>
+  </div>
+
+  <h2>Requiere atención</h2>
+  <div class="atencion">
+    {% for c in conflictos[:3] %}
+    <div class="atencion__item atencion__item--error">
+      <p>{{ c }}</p>
+      <a href="{{ url_for('admin_operacion') }}">Resolver</a>
+    </div>
+    {% endfor %}
+    {% if conflictos|length > 3 %}
+    <div class="atencion__item atencion__item--error">
+      <p>Hay {{ conflictos|length - 3 }} conflicto{{ 's' if conflictos|length - 3 != 1 }} más de disponibilidad.</p>
+      <a href="{{ url_for('admin_operacion') }}">Ver todos</a>
+    </div>
+    {% endif %}
+    {% for p in incompletos[:4] %}
+    <div class="atencion__item">
+      <p><strong>{{ p.nombre }}</strong> no está listo para reservas: {{ p.problema | lower }}</p>
+      <a href="{{ url_for('admin_paquete_editar', paquete_id=p.id) }}">Completar</a>
+    </div>
+    {% endfor %}
+    {% if incompletos|length > 4 %}
+    <div class="atencion__item">
+      <p>Otros {{ incompletos|length - 4 }} paquetes están incompletos.</p>
+      <a href="{{ url_for('admin_paquetes') }}">Ver paquetes</a>
+    </div>
+    {% endif %}
+    {% if metricas.reservas_pendientes %}
+    <div class="atencion__item">
+      <p><strong>{{ metricas.reservas_pendientes }} reserva{{ 's' if metricas.reservas_pendientes != 1 }} pendiente{{ 's' if metricas.reservas_pendientes != 1 }}</strong> de pago o confirmación.</p>
+      <a href="{{ url_for('admin_reportes') }}">Ver reservas</a>
+    </div>
+    {% endif %}
+    {% if not conflictos and not incompletos and not metricas.reservas_pendientes %}
+    <div class="atencion__item atencion__item--ok"><p>Todo en orden: no hay conflictos ni paquetes incompletos.</p></div>
+    {% endif %}
+  </div>
+
+  <h2>Resumen</h2>
+  <div class="metricas">
+    <a class="metrica" href="{{ url_for('admin_paquetes') }}"><span class="metrica__valor">{{ metricas.paquetes_activos }}</span><span class="metrica__nombre">Paquetes activos</span></a>
+    <a class="metrica" href="{{ url_for('admin_reportes') }}"><span class="metrica__valor">{{ metricas.ventas_mes | cop }}</span><span class="metrica__nombre">Ventas de este mes</span></a>
+    <a class="metrica" href="{{ url_for('admin_clientes') }}"><span class="metrica__valor">{{ metricas.clientes }}</span><span class="metrica__nombre">Clientes registrados</span></a>
+    <a class="metrica{% if metricas.por_pagar_proveedores %} metrica--alerta{% endif %}" href="{{ url_for('admin_pagos_proveedores') }}"><span class="metrica__valor">{{ metricas.por_pagar_proveedores | cop }}</span><span class="metrica__nombre">Por pagar a proveedores</span></a>
+  </div>
+
+  <h2>Tareas frecuentes</h2>
+  <div class="accesos">
+    <a class="acceso" href="{{ url_for('admin_paquete_nuevo') }}">
+      <span class="acceso__icono">{{ icono('mas', 22) }}</span>
+      <strong>Crear un paquete</strong><span>Publica un nuevo viaje con fechas y cupos.</span>
+    </a>
+    <a class="acceso" href="{{ url_for('admin_operacion') }}">
+      <span class="acceso__icono">{{ icono('operacion', 22) }}</span>
+      <strong>Hoteles, transporte y vuelos</strong><span>Registra y asigna los recursos de cada viaje.</span>
+    </a>
+    <a class="acceso" href="{{ url_for('admin_pagos_proveedores') }}">
+      <span class="acceso__icono">{{ icono('pagos', 22) }}</span>
+      <strong>Pagos a proveedores</strong><span>Registra lo pagado y lo pendiente.</span>
+    </a>
+    <a class="acceso" href="{{ url_for('admin_reportes') }}">
+      <span class="acceso__icono">{{ icono('reportes', 22) }}</span>
+      <strong>Ver reportes</strong><span>Ventas, reservas, costos y operación.</span>
+    </a>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/banner.js') }}"></script>{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block cuerpo %}
+<div class="pantalla">
+  <aside class="izquierda">
+    {% include "_ruta.html" %}
+    <div class="izquierda__contenido">
+      <p class="marca">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 17 L20 11" stroke="var(--sun)" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="11" r="2.6" fill="var(--sun)"/></svg>
+        {{ app_nombre }}
+      </p>
+      {% block mensaje %}{% endblock %}
+    </div>
+  </aside>
+  <main class="derecha" id="contenido">
+    <div class="derecha__interior">
+      {% include "_mensajes.html" %}
+      {% block formulario %}{% endblock %}
+    </div>
+    <div class="pie">
+      <a href="{{ url_for('requerimientos') }}">Ver los requerimientos del sistema</a>
+      <p>Proyecto de Ingeniería de Software, Universidad Cooperativa de Colombia.</p>
+    </div>
+  </main>
+</div>
+{% endblock %}
